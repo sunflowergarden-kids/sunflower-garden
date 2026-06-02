@@ -30,6 +30,7 @@ export default function App() {
   });
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [paymentPending, setPaymentPending] = useState(null); // stores booking waiting for payment confirmation
 
   // Load via iframe trick to bypass sandbox CORS
   const loadFromSheets = (action) => new Promise((resolve, reject) => {
@@ -135,12 +136,24 @@ export default function App() {
     } catch (e) {
       console.log("Sheets write error:", e);
     }
-    setBookings(p => [...p, newBooking]);
+    setPaymentPending(newBooking);
     setSubmitting(false);
     setShowModal(false);
     // Redirect to payment
     window.open(PAYMENT_URL, "_blank");
-    setToast({ name: selectedClass.name, date: selectedDate.date, price: selectedClass.price });
+  };
+
+  const confirmPayment = async () => {
+    if (!paymentPending) return;
+    try {
+      await fetch(SHEETS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action:"addBooking", ...paymentPending }),
+      });
+    } catch (e) { console.log("Sheets error:", e); }
+    setBookings(p => [...p, paymentPending]);
+    setPaymentPending(null);
+    setToast({ name: paymentPending.className, date: paymentPending.date, price: paymentPending.price });
     setTimeout(() => setToast(null), 3500);
   };
 
@@ -224,6 +237,27 @@ export default function App() {
           <button key={t.key} onClick={() => { setActiveTab(t.key); setSelectedClass(null); }} style={{ flex:1, padding:"10px 8px", border:"none", borderRadius:20, background:activeTab===t.key?"linear-gradient(135deg,#52B788,#2D8A5E)":"#fff", color:activeTab===t.key?"#fff":"#A0C8B0", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit", boxShadow:activeTab===t.key?"0 4px 16px rgba(45,138,94,0.38)":"0 2px 8px rgba(0,0,0,0.06)", outline:"none", transition:"all 0.2s" }}>{t.icon} {t.label}</button>
         ))}
       </div>
+
+      {/* PAYMENT PENDING BANNER */}
+      {paymentPending && (
+        <div style={{ margin:"12px 14px 0", background:"linear-gradient(135deg,#FFF8E0,#FFF0C0)", borderRadius:20, padding:"16px", border:"2px solid #FFD066", boxShadow:"0 4px 16px rgba(255,180,0,0.2)" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+            <span style={{ fontSize:28 }}>💳</span>
+            <div>
+              <div style={{ fontFamily:"'Baloo 2',cursive", fontWeight:800, color:"#CC8800", fontSize:15 }}>等待付款確認</div>
+              <div style={{ fontSize:12, fontWeight:700, color:"#AA7700" }}>{paymentPending.className} · {paymentPending.date} · HK${paymentPending.price}</div>
+            </div>
+          </div>
+          <div style={{ fontSize:12, fontWeight:700, color:"#AA7700", marginBottom:12 }}>
+            請完成付款後，點擊下方按鈕確認預約 👇
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={() => window.open(PAYMENT_URL, "_blank")} style={{ flex:1, padding:"11px", borderRadius:14, border:"2px solid #FFD066", background:"#fff", color:"#CC8800", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>重新付款 💳</button>
+            <button onClick={confirmPayment} style={{ flex:2, padding:"11px", borderRadius:14, border:"none", background:"linear-gradient(135deg,#FFD166,#FF9500)", color:"#fff", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"'Baloo 2',cursive", boxShadow:"0 3px 12px rgba(255,150,0,0.4)" }}>✅ 我已付款，確認預約！</button>
+          </div>
+          <button onClick={() => setPaymentPending(null)} style={{ width:"100%", marginTop:8, padding:"8px", borderRadius:12, border:"none", background:"none", color:"#ccc", fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>取消此預約</button>
+        </div>
+      )}
 
       {/* LOADING */}
       {loading && (
