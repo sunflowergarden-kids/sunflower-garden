@@ -109,8 +109,8 @@ export default function App() {
       }
     } catch(e) {}
     window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-      size: "invisible",
-      callback: () => {},
+      size: "normal",
+      callback: () => { console.log("reCAPTCHA solved"); },
       "expired-callback": () => { window.recaptchaVerifier = null; }
     });
   };
@@ -120,11 +120,23 @@ export default function App() {
     setAuthLoading(true); setAuthError("");
     try {
       setupRecaptcha();
+      await window.recaptchaVerifier.render();
       const fullPhone = phone.startsWith("+") ? phone : "+852" + phone;
       const result = await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
       setConfirmResult(result);
       setAuthStep("otp");
-    } catch(e) { setAuthError("發送驗證碼失敗，請重試"); console.log(e); }
+    } catch(e) {
+      console.log("SMS error:", e.code, e.message);
+      if (e.code === "auth/operation-not-allowed") {
+        setAuthError("請確認 Firebase 已開啟電話登入功能");
+      } else if (e.code === "auth/too-many-requests") {
+        setAuthError("請求次數過多，請稍後再試");
+      } else if (e.code === "auth/invalid-phone-number") {
+        setAuthError("電話號碼格式不正確");
+      } else {
+        setAuthError("發送驗證碼失敗：" + e.code);
+      }
+    }
     setAuthLoading(false);
   };
 
@@ -208,7 +220,7 @@ export default function App() {
     return (
       <div style={{ fontFamily:"'Nunito','PingFang HK',sans-serif", minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px", background:"linear-gradient(160deg,#F0FAF2,#E0F5E8)" }}>
         <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet" />
-        <div id="recaptcha-container" style={{ position:"fixed", bottom:0, zIndex:9999 }} />
+        <div id="recaptcha-container" style={{ margin:"16px auto", display:"flex", justifyContent:"center" }}></div>
         <div style={{ width:90, height:90, borderRadius:"50%", overflow:"hidden", marginBottom:20, boxShadow:"0 6px 24px rgba(45,138,94,0.3)" }}>
           <img src={"data:image/png;base64," + LOGO_B64} alt="logo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
         </div>
