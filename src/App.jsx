@@ -102,6 +102,8 @@ export default function App() {
 
   const openBooking = (d) => { setSelectedDate(d); setForm({ parent:"", child:"", phone:"", age:"", notes:"" }); setShowModal(true); };
 
+  const PAYMENT_URL = "https://pay.airwallex.com/hkhiv0ma33x5";
+
   const confirm = async () => {
     if (!form.parent || !form.child || !form.phone) return;
     setSubmitting(true);
@@ -136,6 +138,8 @@ export default function App() {
     setBookings(p => [...p, newBooking]);
     setSubmitting(false);
     setShowModal(false);
+    // Redirect to payment
+    window.open(PAYMENT_URL, "_blank");
     setToast({ name: selectedClass.name, date: selectedDate.date, price: selectedClass.price });
     setTimeout(() => setToast(null), 3500);
   };
@@ -480,10 +484,19 @@ export default function App() {
                 <textarea placeholder="如有特殊需要或過敏情況，請在此說明..." value={form.notes} onChange={e => setForm(p => ({...p,notes:e.target.value}))} rows={2} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"2.5px solid #C8EDD8", fontSize:13, fontWeight:700, color:"#1B4D32", background:"#fff", resize:"none", boxSizing:"border-box" }} />
               </div>
             </div>
-            <div style={{ display:"flex", gap:10, marginTop:16 }}>
+            {/* Payment notice */}
+            <div style={{ background:"linear-gradient(135deg,#FFF8E0,#FFF0C0)", borderRadius:14, padding:"12px 14px", marginTop:14, border:"1.5px solid #FFE08A", display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:22 }}>💳</span>
+              <div>
+                <div style={{ fontSize:12, fontWeight:900, color:"#CC8800" }}>點擊確認後將跳至付款頁面</div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#AA7700", marginTop:2 }}>付款完成後預約即時確認 ✅</div>
+              </div>
+            </div>
+
+            <div style={{ display:"flex", gap:10, marginTop:12 }}>
               <button onClick={() => setShowModal(false)} style={{ flex:1, padding:"13px", borderRadius:16, border:"2.5px solid #C8EDD8", background:"#fff", color:"#B0C8BC", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>取消</button>
               <button onClick={confirm} disabled={!form.parent||!form.child||!form.phone||submitting} className="bookbtn" style={{ flex:2, padding:"13px", borderRadius:16, border:"none", background:(!form.parent||!form.child||!form.phone||submitting)?"#C8EDD8":"linear-gradient(135deg,#52B788,#2D8A5E)", color:(!form.parent||!form.child||!form.phone||submitting)?"#90C0A0":"#fff", fontWeight:900, fontSize:14, cursor:"pointer", fontFamily:"'Baloo 2',cursive", boxShadow:(!form.parent||!form.child||!form.phone)?"none":"0 4px 18px rgba(45,138,94,0.42)" }}>
-                {submitting ? "提交中..." : `確認預約 · HK${selectedClass.price} 🌻`}
+                {submitting ? "跳轉付款中..." : `下一步：付款 HK$${selectedClass.price} 💳`}
               </button>
             </div>
           </div>
