@@ -102,9 +102,17 @@ export default function App() {
   };
 
   const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size:"invisible" });
-    }
+    try {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
+    } catch(e) {}
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+      size: "invisible",
+      callback: () => {},
+      "expired-callback": () => { window.recaptchaVerifier = null; }
+    });
   };
 
   const sendOTP = async () => {
@@ -200,7 +208,7 @@ export default function App() {
     return (
       <div style={{ fontFamily:"'Nunito','PingFang HK',sans-serif", minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px", background:"linear-gradient(160deg,#F0FAF2,#E0F5E8)" }}>
         <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet" />
-        <div id="recaptcha-container" />
+        <div id="recaptcha-container" style={{ position:"fixed", bottom:0, zIndex:9999 }} />
         <div style={{ width:90, height:90, borderRadius:"50%", overflow:"hidden", marginBottom:20, boxShadow:"0 6px 24px rgba(45,138,94,0.3)" }}>
           <img src={"data:image/png;base64," + LOGO_B64} alt="logo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
         </div>
