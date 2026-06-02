@@ -28,7 +28,7 @@ const DEFAULT_BG = [
   "linear-gradient(135deg,#C7F9CC,#38A3A5)",
 ];
 
-const categories = ["全部","手工藝術","感官遊戲","STEAM","語言文學","烹飪","音樂"];
+const categories = ["全部","手工藝術","感官遊戲","STEAM","語言文學","烹飪","音樂","Summer Camp"];
 
 export default function App() {
   // Auth state
@@ -322,9 +322,9 @@ export default function App() {
       </div>
 
       {/* TABS */}
-      <div style={{ display:"flex", gap:10, padding:"12px 14px 0", position:"sticky", top:0, zIndex:10, background:"#F0FAF2" }}>
-        {[{key:"browse",icon:"🔍",label:"瀏覽課程"},{key:"bookings",icon:"🌟",label:"我的預約"}].map(t => (
-          <button key={t.key} onClick={() => { setActiveTab(t.key); setSelectedClass(null); }} style={{ flex:1, padding:"10px 8px", border:"none", borderRadius:20, background:activeTab===t.key?"linear-gradient(135deg,#52B788,#2D8A5E)":"#fff", color:activeTab===t.key?"#fff":"#A0C8B0", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit", boxShadow:activeTab===t.key?"0 4px 16px rgba(45,138,94,0.38)":"0 2px 8px rgba(0,0,0,0.06)", outline:"none", transition:"all 0.2s" }}>{t.icon} {t.label}</button>
+      <div style={{ display:"flex", gap:8, padding:"12px 14px 0", position:"sticky", top:0, zIndex:10, background:"#F0FAF2" }}>
+        {[{key:"browse",icon:"🔍",label:"課程"},{key:"summer",icon:"☀️",label:"暑期班"},{key:"bookings",icon:"🌟",label:"預約"}].map(t => (
+          <button key={t.key} onClick={() => { setActiveTab(t.key); setSelectedClass(null); if(t.key==="summer") setSelectedCat("Summer Camp"); else if(t.key==="browse") setSelectedCat("全部"); }} style={{ flex:1, padding:"10px 6px", border:"none", borderRadius:20, background:activeTab===t.key?t.key==="summer"?"linear-gradient(135deg,#FFD166,#FF9500)":"linear-gradient(135deg,#52B788,#2D8A5E)":"#fff", color:activeTab===t.key?"#fff":"#A0C8B0", fontWeight:900, fontSize:12, cursor:"pointer", fontFamily:"inherit", boxShadow:activeTab===t.key?t.key==="summer"?"0 4px 16px rgba(255,150,0,0.38)":"0 4px 16px rgba(45,138,94,0.38)":"0 2px 8px rgba(0,0,0,0.06)", outline:"none", transition:"all 0.2s" }}>{t.icon} {t.label}</button>
         ))}
       </div>
 
@@ -365,8 +365,16 @@ export default function App() {
       )}
 
       {/* BROWSE - Class List */}
-      {!loading && !error && activeTab === "browse" && !selectedClass && (
+      {!loading && !error && (activeTab === "browse" || activeTab === "summer") && !selectedClass && (
         <div style={{ padding:"12px 14px 110px" }}>
+          {activeTab === "summer" && (
+            <div style={{ background:"linear-gradient(135deg,#FFD166,#FF9500)", borderRadius:18, padding:"14px 16px", marginBottom:14, position:"relative", overflow:"hidden" }}>
+              <div style={{ position:"absolute", top:-15, right:-15, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,0.2)" }} />
+              <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:18, fontWeight:800, color:"#fff", marginBottom:2 }}>☀️ Summer Camp 2025</div>
+              <div style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,0.9)" }}>📍 荔枝角 · 7 JUL – 28 AUG · 10:30-12:30</div>
+              <div style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.85)", marginTop:3 }}>適合升PN-升K2幼兒 · 每堂 HK$350</div>
+            </div>
+          )}
           <div style={{ overflowX:"auto", paddingBottom:8, marginBottom:14 }}>
             <div style={{ display:"flex", gap:8, width:"max-content" }}>
               {categories.map(cat => (
@@ -413,7 +421,7 @@ export default function App() {
       )}
 
       {/* BROWSE - Class Detail */}
-      {!loading && !error && activeTab === "browse" && selectedClass && (
+      {!loading && !error && (activeTab === "browse" || activeTab === "summer") && selectedClass && (
         <div className="slide-in" style={{ padding:"12px 14px 110px" }}>
           <button onClick={() => setSelectedClass(null)} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"#2D8A5E", fontWeight:900, fontSize:13, cursor:"pointer", padding:"4px 0 12px", fontFamily:"inherit" }}>← 返回課程列表</button>
           <div style={{ borderRadius:22, overflow:"hidden", marginBottom:14, boxShadow:"0 6px 24px rgba(45,138,94,0.18)" }}>
