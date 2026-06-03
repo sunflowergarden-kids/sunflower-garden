@@ -375,13 +375,15 @@ export default function App() {
               <div style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.85)", marginTop:3 }}>適合升PN-升K2幼兒 · 每堂 HK$350</div>
             </div>
           )}
-          <div style={{ overflowX:"auto", paddingBottom:8, marginBottom:14 }}>
-            <div style={{ display:"flex", gap:8, width:"max-content" }}>
-              {categories.map(cat => (
-                <button key={cat} className="chip" onClick={() => setSelectedCat(cat)} style={{ padding:"7px 14px", borderRadius:20, border:selectedCat===cat?"none":"2.5px solid #D4F0C0", background:selectedCat===cat?"linear-gradient(135deg,#52B788,#2D8A5E)":"#fff", color:selectedCat===cat?"#fff":"#52A878", fontSize:12, fontWeight:900, cursor:"pointer", fontFamily:"inherit", boxShadow:selectedCat===cat?"0 3px 10px rgba(45,138,94,0.35)":"none" }}>{cat}</button>
-              ))}
+          {activeTab !== "summer" && (
+            <div style={{ overflowX:"auto", paddingBottom:8, marginBottom:14 }}>
+              <div style={{ display:"flex", gap:8, width:"max-content" }}>
+                {categories.filter(c => c !== "Summer Camp").map(cat => (
+                  <button key={cat} className="chip" onClick={() => setSelectedCat(cat)} style={{ padding:"7px 14px", borderRadius:20, border:selectedCat===cat?"none":"2.5px solid #D4F0C0", background:selectedCat===cat?"linear-gradient(135deg,#52B788,#2D8A5E)":"#fff", color:selectedCat===cat?"#fff":"#52A878", fontSize:12, fontWeight:900, cursor:"pointer", fontFamily:"inherit", boxShadow:selectedCat===cat?"0 3px 10px rgba(45,138,94,0.35)":"none" }}>{cat}</button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             {filtered.map((cls,i) => (
               <div key={cls.id} className="card" onClick={() => openClass(cls)} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", animationDelay:(i*0.06)+"s", background:"#fff", cursor:"pointer" }}>
