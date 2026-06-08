@@ -28,7 +28,7 @@ const DEFAULT_BG = [
   "linear-gradient(135deg,#C7F9CC,#38A3A5)",
 ];
 
-const categories = ["全部","手工藝術","感官遊戲","STEAM","語言文學","烹飪","音樂","Summer Camp"];
+const categories = ["全部","手工藝術","感官遊戲","STEAM","語言文學","烹飪","音樂","中文繪本 Playgroup","Summer Camp"];
 
 export default function App() {
   // Auth state
