@@ -213,11 +213,13 @@ export default function App() {
   const totalSpend = bookings.reduce((s,b) => s + b.price, 0);
 
   const openClass = (cls) => { setSelectedClass(cls); setSelectedDate(null); setShowModal(false); };
-  const openBooking = (d) => { setSelectedDate(d); setForm({ parent:"", child:"", phone2:"", age:"", notes:"" }); setShowModal(true); };
+  const openBooking = (d) => { setSelectedDate(d); setForm({ partySize:"", parent:"", child:"", phone2:"", age:"", notes:"" }); setShowModal(true); };
 
   const confirm = async () => {
-    if (!form.parent || !form.child || !form.phone2) return;
+    if (!form.partySize || !form.child || !form.phone2) return;
     setSubmitting(true);
+    const basePrice = Number(String(selectedDate.price || selectedClass.price).replace(/[^0-9.]/g, "")) || 0;
+    const finalPrice = form.partySize === "兩大一小" ? basePrice + 30 : basePrice;
     const newBooking = {
       id: Date.now(),
       key: getKey(selectedDate.courseId || selectedClass.id, selectedDate.date),
@@ -228,10 +230,11 @@ export default function App() {
       category: selectedClass.category,
       teacher: selectedClass.teacher,
       time: selectedDate.time || selectedClass.time,
-      price: selectedDate.price || selectedClass.price,
+      price: finalPrice,
+      partySize: form.partySize,
       date: selectedDate.date,
       day: selectedDate.day,
-      parent: form.parent,
+      parent: form.parent || form.partySize,
       child: form.child,
       phone: form.phone2,
       age: form.age,
@@ -645,7 +648,26 @@ export default function App() {
               </div>
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              {[{label:"👩 家長／監護人姓名",key:"parent",ph:"例如：陳美玲",req:true},{label:"🧒 小朋友姓名",key:"child",ph:"例如：陳小明",req:true},{label:"📱 聯絡電話",key:"phone2",ph:"例如：9123 4567",req:true},{label:"🎂 小朋友年齡",key:"age",ph:"例如：4歲",req:false}].map(f => (
+              {/* 參加人數 dropdown */}
+              <div>
+                <label style={{ fontSize:11, fontWeight:900, color:"#2D8A5E", display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:0.8 }}>👥 參加人數 *</label>
+                <select
+                  value={form.partySize}
+                  onChange={e => setForm(p => ({...p, partySize: e.target.value}))}
+                  style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:form.partySize?"2.5px solid #52B788":"2.5px solid #C8EDD8", fontSize:14, fontWeight:700, color:form.partySize?"#1B4D32":"#999", background:"#fff", boxSizing:"border-box", appearance:"auto" }}
+                >
+                  <option value="">請選擇參加人數</option>
+                  <option value="一大一小">一大一小</option>
+                  <option value="兩大一小">兩大一小</option>
+                </select>
+                {form.partySize && (
+                  <div style={{ marginTop:8, fontSize:13, fontWeight:800, color:"#2D8A5E" }}>
+                    💰 本堂收費：HK${(Number(String(selectedDate?.price || selectedClass?.price || 0).replace(/[^0-9.]/g,"")) || 0) + (form.partySize === "兩大一小" ? 30 : 0)}
+                    <span style={{ fontSize:11, fontWeight:600, color:"#7ABF9A" }}>（{form.partySize}）</span>
+                  </div>
+                )}
+              </div>
+              {[{label:"🧒 小朋友姓名",key:"child",ph:"例如：陳小明",req:true},{label:"📱 聯絡電話",key:"phone2",ph:"例如：9123 4567",req:true},{label:"👩 家長／監護人姓名",key:"parent",ph:"例如：陳美玲",req:false},{label:"🎂 小朋友年齡",key:"age",ph:"例如：4歲",req:false}].map(f => (
                 <div key={f.key}>
                   <label style={{ fontSize:11, fontWeight:900, color:"#2D8A5E", display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:0.8 }}>{f.label}{f.req?" *":""}</label>
                   <input type={f.key==="phone2"?"tel":"text"} placeholder={f.ph} value={form[f.key]} onChange={e => setForm(p => ({...p,[f.key]:e.target.value}))} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:form[f.key]?"2.5px solid #52B788":"2.5px solid #C8EDD8", fontSize:14, fontWeight:700, color:"#1B4D32", background:"#fff", boxSizing:"border-box" }} />
@@ -665,7 +687,7 @@ export default function App() {
             </div>
             <div style={{ display:"flex", gap:10, marginTop:12 }}>
               <button onClick={() => setShowModal(false)} style={{ flex:1, padding:"13px", borderRadius:16, border:"2.5px solid #C8EDD8", background:"#fff", color:"#B0C8BC", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>取消</button>
-              <button onClick={confirm} disabled={!form.parent||!form.child||!form.phone2||submitting} className="bookbtn" style={{ flex:2, padding:"13px", borderRadius:16, border:"none", background:(!form.parent||!form.child||!form.phone2||submitting)?"#C8EDD8":"linear-gradient(135deg,#52B788,#2D8A5E)", color:(!form.parent||!form.child||!form.phone2||submitting)?"#90C0A0":"#fff", fontWeight:900, fontSize:14, cursor:"pointer", fontFamily:"'Baloo 2',cursive" }}>
+              <button onClick={confirm} disabled={!form.partySize||!form.child||!form.phone2||submitting} className="bookbtn" style={{ flex:2, padding:"13px", borderRadius:16, border:"none", background:(!form.parent||!form.child||!form.phone2||submitting)?"#C8EDD8":"linear-gradient(135deg,#52B788,#2D8A5E)", color:(!form.parent||!form.child||!form.phone2||submitting)?"#90C0A0":"#fff", fontWeight:900, fontSize:14, cursor:"pointer", fontFamily:"'Baloo 2',cursive" }}>
                 {submitting?"跳轉付款中...":"下一步：付款 HK$"+selectedClass.price+" 💳"}
               </button>
             </div>
