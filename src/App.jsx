@@ -210,6 +210,22 @@ export default function App() {
   };
   const getKey = (classId, date) => classId + "_" + date;
   const isBooked = (classId, date) => bookings.some(b => b.key === getKey(classId, date));
+
+  // 由 desc 解析「一大一小 / 兩大一小」價錢；解析唔到就用 price / price+30
+  const getPartyPrices = (cls) => {
+    const desc = String((cls && cls.desc) || "");
+    const base = Number(String((cls && cls.price) || 0).replace(/[^0-9.]/g, "")) || 0;
+    // 匹配：一大一小 前面嘅 $數字
+    const m1 = desc.match(/\$(\d+)\s*\/?\s*一大一小/);
+    const m2 = desc.match(/\$(\d+)\s*\/?\s*兩大一小/);
+    const one = m1 ? Number(m1[1]) : base;
+    const two = m2 ? Number(m2[1]) : (base + 30);
+    return { one, two };
+  };
+  const priceForParty = (cls, partySize) => {
+    const { one, two } = getPartyPrices(cls);
+    return partySize === "兩大一小" ? two : one;
+  };
   const totalSpend = bookings.reduce((s,b) => s + b.price, 0);
 
   const openClass = (cls) => { setSelectedClass(cls); setSelectedDate(null); setShowModal(false); };
@@ -218,8 +234,7 @@ export default function App() {
   const confirm = async () => {
     if (!form.partySize || !form.child || !form.phone2) return;
     setSubmitting(true);
-    const basePrice = Number(String(selectedDate.price || selectedClass.price).replace(/[^0-9.]/g, "")) || 0;
-    const finalPrice = form.partySize === "兩大一小" ? basePrice + 30 : basePrice;
+    const finalPrice = priceForParty(selectedDate || selectedClass, form.partySize);
     const newBooking = {
       id: Date.now(),
       key: getKey(selectedDate.courseId || selectedClass.id, selectedDate.date),
@@ -681,7 +696,7 @@ export default function App() {
                 </select>
                 {form.partySize && (
                   <div style={{ marginTop:8, fontSize:13, fontWeight:800, color:"#2D8A5E" }}>
-                    💰 本堂收費：HK${(Number(String(selectedDate?.price || selectedClass?.price || 0).replace(/[^0-9.]/g,"")) || 0) + (form.partySize === "兩大一小" ? 30 : 0)}
+                    💰 本堂收費：HK${priceForParty(selectedDate || selectedClass, form.partySize)}
                     <span style={{ fontSize:11, fontWeight:600, color:"#7ABF9A" }}>（{form.partySize}）</span>
                   </div>
                 )}
