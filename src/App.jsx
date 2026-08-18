@@ -581,9 +581,15 @@ export default function App() {
             <div style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,0.8)", marginTop:2 }}>🌈 向日葵花園親子課程</div>
           </div>
           <div style={{ marginLeft:"auto" }}>
-            <div onClick={() => setActiveTab("bookings")} style={{ background:"rgba(255,255,255,0.2)", borderRadius:16, padding:"10px 12px", cursor:"pointer", textAlign:"center", border:"1.5px solid rgba(255,255,255,0.35)" }}>
-              <div style={{ fontSize:20 }}>📋</div>
-              <div style={{ fontSize:10, fontWeight:900, color:"#FFE566", marginTop:2 }}>{bookings.length} 預約</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <div onClick={() => setTutorMode("pin")} style={{ background:"rgba(255,255,255,0.2)", borderRadius:16, padding:"10px 12px", cursor:"pointer", textAlign:"center", border:"1.5px solid rgba(255,255,255,0.35)" }}>
+                <div style={{ fontSize:20 }}>👩‍🏫</div>
+                <div style={{ fontSize:10, fontWeight:900, color:"#FFE566", marginTop:2 }}>導師</div>
+              </div>
+              <div onClick={() => setActiveTab("bookings")} style={{ background:"rgba(255,255,255,0.2)", borderRadius:16, padding:"10px 12px", cursor:"pointer", textAlign:"center", border:"1.5px solid rgba(255,255,255,0.35)" }}>
+                <div style={{ fontSize:20 }}>📋</div>
+                <div style={{ fontSize:10, fontWeight:900, color:"#FFE566", marginTop:2 }}>{bookings.length} 預約</div>
+              </div>
             </div>
           </div>
         </div>
