@@ -333,9 +333,10 @@ export default function App() {
     const slots = [];
     classes.forEach(cls => {
       allDates.filter(d => String(d.courseId) === String(cls.id)).forEach(d => {
-        const matched = tutorBookings.filter(b =>
-          String(b.classId) === String(cls.id) && toDayMonthStr(b.date) === toDayMonthStr(d.date)
-        );
+        const matched = tutorBookings.filter(b => {
+          const bid = String(b.classId || b.classld || b.ClassId || "").trim();
+          return bid === String(cls.id).trim() && toDayMonthStr(b.date) === toDayMonthStr(d.date);
+        });
         slots.push({
           classId: cls.id,
           className: cls.name,
@@ -364,8 +365,15 @@ export default function App() {
   const toDayMonthStr = (val) => {
     if (val instanceof Date) return val.getDate() + "/" + (val.getMonth() + 1);
     const s = String(val || "").trim();
-    const m = s.match(/(\d{1,2})\/(\d{1,2})/);
+    // "6/9" or "06/09"
+    let m = s.match(/^(\d{1,2})\/(\d{1,2})/);
     if (m) return Number(m[1]) + "/" + Number(m[2]);
+    // ISO: 2026-09-06T...
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return Number(m[3]) + "/" + Number(m[2]);
+    // fallback Date parse
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d.getDate() + "/" + (d.getMonth() + 1);
     return s;
   };
 
