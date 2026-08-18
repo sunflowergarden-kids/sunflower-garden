@@ -275,10 +275,13 @@ export default function App() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const cancelBooking = async (key, id, docId) => {
+  const cancelBooking = async (key, id, docId, classId, date) => {
     try {
       if (docId) await deleteDoc(doc(db, "bookings", docId));
-      await fetch(SHEETS_URL, { method:"POST", body: JSON.stringify({action:"cancelBooking", id}) }).catch(e => {});
+      await fetch(SHEETS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "cancelBooking", id, classId, date })
+      }).catch(e => {});
     } catch(e) {}
     setBookings(p => p.filter(b => b.key !== key));
   };
@@ -633,7 +636,7 @@ export default function App() {
                         </div>
                         {b.notes && <div style={{ marginTop:8, paddingTop:8, borderTop:"1.5px dashed #C8EDD8" }}><div style={{ fontSize:10, fontWeight:900, color:"#7ABF9A" }}>📝 備注</div><div style={{ fontSize:12, fontWeight:700, color:"#555", marginTop:2 }}>{b.notes}</div></div>}
                       </div>
-                      <button onClick={() => cancelBooking(b.key, b.id, b.docId)} style={{ width:"100%", padding:"10px", borderRadius:14, border:"2px dashed #C8EDD8", background:"#F5FFFA", color:"#999", fontWeight:900, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>取消預約 🍃</button>
+                      <button onClick={() => cancelBooking(b.key, b.id, b.docId, b.classId, b.date)} style={{ width:"100%", padding:"10px", borderRadius:14, border:"2px dashed #C8EDD8", background:"#F5FFFA", color:"#999", fontWeight:900, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>取消預約 🍃</button>
                     </div>
                   </div>
                 ))}
