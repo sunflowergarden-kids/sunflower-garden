@@ -56,6 +56,12 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false);
   const [paymentPending, setPaymentPending] = useState(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
+  const [tutorMode, setTutorMode] = useState(false); // false | 'pin' | true
+  const [tutorPin, setTutorPin] = useState("");
+  const [tutorPinError, setTutorPinError] = useState("");
+  const [tutorBookings, setTutorBookings] = useState([]);
+  const [tutorLoading, setTutorLoading] = useState(false);
+  const [tutorFilterDate, setTutorFilterDate] = useState("全部");
 
   // Auth listener
   useEffect(() => {
@@ -292,6 +298,190 @@ export default function App() {
   const seatColor = (s) => s===0?"#bbb":s<=2?"#E8855B":"#2D8A5E";
   const seatLabel = (s) => s===0?"已滿額 🈵":s<=2?"🔥 剩 "+s+" 位":"✅ 尚餘 "+s+" 位";
 
+
+  // ── TUTOR DASHBOARD ──
+  const TUTOR_PIN = "0822";
+
+  const loadTutorData = async () => {
+    setTutorLoading(true);
+    try {
+      // reuse courses + dates
+      await loadData();
+      const res = await fetch(SHEETS_URL + "?action=getBookings");
+      const data = await res.json();
+      setTutorBookings(Array.isArray(data) ? data : []);
+    } catch(e) {
+      console.log(e);
+      setTutorBookings([]);
+    } finally {
+      setTutorLoading(false);
+    }
+  };
+
+  const handleTutorPin = () => {
+    if (tutorPin.trim() === TUTOR_PIN) {
+      setTutorPinError("");
+      setTutorMode(true);
+      loadTutorData();
+    } else {
+      setTutorPinError("通行碼錯誤，請再試");
+    }
+  };
+
+  // Build all slots for tutor: every courseId+date, with matching bookings
+  const getTutorSlots = () => {
+    const slots = [];
+    classes.forEach(cls => {
+      allDates.filter(d => String(d.courseId) === String(cls.id)).forEach(d => {
+        const matched = tutorBookings.filter(b =>
+          String(b.classId) === String(cls.id) && toDayMonthStr(b.date) === toDayMonthStr(d.date)
+        );
+        slots.push({
+          classId: cls.id,
+          className: cls.name,
+          emoji: cls.emoji,
+          bg: cls.bg,
+          time: cls.time,
+          date: d.date,
+          day: d.day,
+          seats: Number(d.seats) || 0,
+          totalSeats: Number(cls.totalSeats) || 0,
+          bookings: matched,
+        });
+      });
+    });
+    // sort by date then time
+    slots.sort((a, b) => {
+      const pa = toDayMonthStr(a.date).split("/").map(Number);
+      const pb = toDayMonthStr(b.date).split("/").map(Number);
+      if (pa[1] !== pb[1]) return pa[1] - pb[1];
+      if (pa[0] !== pb[0]) return pa[0] - pb[0];
+      return String(a.time).localeCompare(String(b.time));
+    });
+    return slots;
+  };
+
+  const toDayMonthStr = (val) => {
+    if (val instanceof Date) return val.getDate() + "/" + (val.getMonth() + 1);
+    const s = String(val || "").trim();
+    const m = s.match(/(\d{1,2})\/(\d{1,2})/);
+    if (m) return Number(m[1]) + "/" + Number(m[2]);
+    return s;
+  };
+
+  // ── TUTOR PIN SCREEN ──
+  if (tutorMode === "pin") {
+    return (
+      <div style={{ fontFamily:"'Nunito','PingFang HK',sans-serif", minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"linear-gradient(160deg,#F0FAF2,#E8F5EE)", padding:24 }}>
+        <div style={{ background:"#fff", borderRadius:24, padding:"32px 28px", boxShadow:"0 8px 32px rgba(45,138,94,0.12)", width:"100%", maxWidth:360, textAlign:"center" }}>
+          <div style={{ fontSize:40, marginBottom:8 }}>🌻</div>
+          <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:22, fontWeight:800, color:"#2D8A5E" }}>導師專區</div>
+          <div style={{ fontSize:13, color:"#888", margin:"8px 0 24px" }}>請輸入通行碼查看報名情況</div>
+          <input
+            type="password"
+            inputMode="numeric"
+            value={tutorPin}
+            onChange={e => setTutorPin(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleTutorPin()}
+            placeholder="通行碼"
+            style={{ width:"100%", padding:"14px", borderRadius:14, border:"2.5px solid #C8EDD8", fontSize:18, fontWeight:700, textAlign:"center", letterSpacing:8, boxSizing:"border-box", marginBottom:12 }}
+          />
+          {tutorPinError && <div style={{ color:"#E8855B", fontSize:13, fontWeight:700, marginBottom:10 }}>{tutorPinError}</div>}
+          <button onClick={handleTutorPin} style={{ width:"100%", padding:"14px", borderRadius:16, border:"none", background:"linear-gradient(135deg,#52B788,#2D8A5E)", color:"#fff", fontWeight:900, fontSize:15, cursor:"pointer", fontFamily:"inherit" }}>進入</button>
+          <button onClick={() => { setTutorMode(false); setTutorPin(""); setTutorPinError(""); }} style={{ marginTop:12, background:"none", border:"none", color:"#A0C8B0", fontWeight:700, fontSize:13, cursor:"pointer" }}>← 返回</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── TUTOR DASHBOARD ──
+  if (tutorMode === true) {
+    const slots = getTutorSlots();
+    const allDatesList = ["全部", ...Array.from(new Set(slots.map(s => toDayMonthStr(s.date))))];
+    const filtered = tutorFilterDate === "全部" ? slots : slots.filter(s => toDayMonthStr(s.date) === tutorFilterDate);
+
+    return (
+      <div style={{ fontFamily:"'Nunito','PingFang HK',sans-serif", minHeight:"100vh", background:"#F0FAF2", paddingBottom:40 }}>
+        <div style={{ background:"linear-gradient(135deg,#2D8A5E,#52B788)", padding:"18px 16px 14px", color:"#fff" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div>
+              <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:20, fontWeight:800 }}>🌻 導師看板</div>
+              <div style={{ fontSize:12, fontWeight:700, opacity:0.9, marginTop:2 }}>9月中秋課程 · 即時報名情況</div>
+            </div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={loadTutorData} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:12, padding:"8px 12px", color:"#fff", fontWeight:800, fontSize:12, cursor:"pointer" }}>🔄 更新</button>
+              <button onClick={() => { setTutorMode(false); setTutorPin(""); }} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:12, padding:"8px 12px", color:"#fff", fontWeight:800, fontSize:12, cursor:"pointer" }}>離開</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Date filters */}
+        <div style={{ overflowX:"auto", padding:"12px 14px", display:"flex", gap:8 }}>
+          {allDatesList.map(d => (
+            <button key={d} onClick={() => setTutorFilterDate(d)} style={{
+              flexShrink:0, padding:"7px 14px", borderRadius:20, border: tutorFilterDate===d ? "none" : "2px solid #D4F0C0",
+              background: tutorFilterDate===d ? "linear-gradient(135deg,#52B788,#2D8A5E)" : "#fff",
+              color: tutorFilterDate===d ? "#fff" : "#52A878", fontWeight:900, fontSize:12, cursor:"pointer", fontFamily:"inherit"
+            }}>{d}</button>
+          ))}
+        </div>
+
+        {tutorLoading ? (
+          <div style={{ textAlign:"center", padding:40, color:"#7ABF9A", fontWeight:700 }}>載入中...</div>
+        ) : (
+          <div style={{ padding:"0 14px", display:"flex", flexDirection:"column", gap:12 }}>
+            {filtered.length === 0 && (
+              <div style={{ textAlign:"center", padding:40, color:"#A0C8B0", fontWeight:700 }}>未有課程時段</div>
+            )}
+            {filtered.map((s, i) => {
+              const booked = s.bookings.length;
+              const total = s.totalSeats || 12;
+              const pct = Math.min(100, (booked / total) * 100);
+              return (
+                <div key={s.classId + "_" + s.date + "_" + s.time} style={{ background:"#fff", borderRadius:18, overflow:"hidden", boxShadow:"0 3px 14px rgba(0,0,0,0.06)" }}>
+                  <div style={{ background: s.bg || "linear-gradient(135deg,#52B788,#2D8A5E)", padding:"12px 14px", color:"#fff" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontSize:22 }}>{s.emoji || "🌿"}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:15, fontWeight:800 }}>{s.className}</div>
+                        <div style={{ fontSize:12, fontWeight:700, opacity:0.92 }}>📅 {s.date}（{s.day}）· ⏰ {s.time}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ padding:"12px 14px" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                      <div style={{ fontWeight:900, fontSize:14, color: booked===0 ? "#A0C8B0" : "#2D8A5E" }}>
+                        {booked === 0 ? "尚未有人報名" : `已報 ${booked} / ${total} 位`}
+                      </div>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#7ABF9A" }}>{booked}/{total}</div>
+                    </div>
+                    <div style={{ height:6, background:"#E8F5EE", borderRadius:4, overflow:"hidden", marginBottom: booked>0 ? 12 : 0 }}>
+                      <div style={{ height:"100%", width: pct+"%", background: booked===0 ? "#E8F5EE" : "linear-gradient(90deg,#52B788,#2D8A5E)", borderRadius:4 }} />
+                    </div>
+                    {s.bookings.map((b, j) => (
+                      <div key={j} style={{ padding:"10px 0", borderTop: j===0 ? "1.5px solid #E8F5EE" : "1px dashed #E8F5EE" }}>
+                        <div style={{ fontWeight:900, fontSize:14, color:"#1B4D32" }}>🧒 {b.child || "—"}</div>
+                        <div style={{ fontSize:12, fontWeight:700, color:"#52A878", marginTop:3 }}>
+                          👥 {b.partySize || "—"}
+                          {b.price ? ` · 💰 $${b.price}` : ""}
+                        </div>
+                        <div style={{ fontSize:12, fontWeight:700, color:"#666", marginTop:3 }}>
+                          👩 {b.parent || "—"} · 📱 {b.phone || "—"}
+                        </div>
+                        {b.age && <div style={{ fontSize:11, fontWeight:600, color:"#999", marginTop:2 }}>🎂 {b.age}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+
   // ── AUTH SCREEN ──
   if (authStep !== "done") {
     return (
@@ -302,7 +492,8 @@ export default function App() {
           <img src={"data:image/png;base64," + LOGO_B64} alt="logo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
         </div>
         <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:26, fontWeight:800, color:"#2D8A5E", marginBottom:4 }}>Sunflower Garden</div>
-        <div style={{ fontSize:13, fontWeight:700, color:"#7ABF9A", marginBottom:32 }}>🌈 向日葵花園親子課程</div>
+        <div style={{ fontSize:13, fontWeight:700, color:"#7ABF9A", marginBottom:16 }}>🌈 向日葵花園親子課程</div>
+        <button onClick={() => setTutorMode("pin")} style={{ marginBottom:20, background:"rgba(45,138,94,0.08)", border:"1.5px solid #C8EDD8", borderRadius:14, padding:"8px 16px", color:"#2D8A5E", fontWeight:800, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>👩‍🏫 導師入口</button>
         <div style={{ width:"100%", maxWidth:360, background:"#fff", borderRadius:24, padding:"28px 24px", boxShadow:"0 8px 32px rgba(45,138,94,0.15)" }}>
           {authStep === "phone" && (
             <div>
