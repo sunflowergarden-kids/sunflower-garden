@@ -155,6 +155,59 @@ export default function App() {
 
   const getDatesForClass = (id) => allDates.filter(d => String(d.courseId) === String(id));
   const filtered = classes.filter(c => selectedCat === "全部" || c.category === selectedCat);
+  // Group by activity name — one card per activity
+  const groupedActivities = (() => {
+    const map = {};
+    filtered.forEach(c => {
+      if (!map[c.name]) {
+        map[c.name] = {
+          ...c,
+          times: [c.time],
+          classIds: [c.id],
+          variants: [c],
+        };
+      } else {
+        if (!map[c.name].times.includes(c.time)) map[c.name].times.push(c.time);
+        map[c.name].classIds.push(c.id);
+        map[c.name].variants.push(c);
+      }
+    });
+    return Object.values(map);
+  })();
+  // All date+time slots for a given activity name
+  const getSlotsForActivity = (name) => {
+    const variants = classes.filter(c => c.name === name);
+    const slots = [];
+    variants.forEach(v => {
+      getDatesForClass(v.id).forEach(d => {
+        slots.push({
+          ...d,
+          courseId: v.id,
+          time: v.time,
+          duration: v.duration,
+          totalSeats: v.totalSeats,
+          price: v.price,
+          emoji: v.emoji,
+          bg: v.bg,
+          className: v.name,
+          category: v.category,
+          teacher: v.teacher,
+          age: v.age,
+          sticker: v.sticker,
+          desc: v.desc,
+        });
+      });
+    });
+    // sort by date then time
+    return slots.sort((a, b) => {
+      const da = a.date.split("/").map(Number);
+      const db = b.date.split("/").map(Number);
+      // assume D/M format
+      if (da[1] !== db[1]) return da[1] - db[1];
+      if (da[0] !== db[0]) return da[0] - db[0];
+      return String(a.time).localeCompare(String(b.time));
+    });
+  };
   const getKey = (classId, date) => classId + "_" + date;
   const isBooked = (classId, date) => bookings.some(b => b.key === getKey(classId, date));
   const totalSpend = bookings.reduce((s,b) => s + b.price, 0);
@@ -167,15 +220,15 @@ export default function App() {
     setSubmitting(true);
     const newBooking = {
       id: Date.now(),
-      key: getKey(selectedClass.id, selectedDate.date),
-      classId: selectedClass.id,
+      key: getKey(selectedDate.courseId || selectedClass.id, selectedDate.date),
+      classId: selectedDate.courseId || selectedClass.id,
       className: selectedClass.name,
       emoji: selectedClass.emoji,
       bg: selectedClass.bg,
       category: selectedClass.category,
       teacher: selectedClass.teacher,
-      time: selectedClass.time,
-      price: selectedClass.price,
+      time: selectedDate.time || selectedClass.time,
+      price: selectedDate.price || selectedClass.price,
       date: selectedDate.date,
       day: selectedDate.day,
       parent: form.parent,
@@ -379,8 +432,8 @@ export default function App() {
             </div>
           </div>
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            {filtered.map((cls,i) => (
-              <div key={cls.id} className="card" onClick={() => openClass(cls)} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", animationDelay:(i*0.06)+"s", background:"#fff", cursor:"pointer" }}>
+            {groupedActivities.map((cls,i) => (
+              <div key={cls.name} className="card" onClick={() => openClass(cls)} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", animationDelay:(i*0.06)+"s", background:"#fff", cursor:"pointer" }}>
                 <div style={{ background:cls.bg, padding:"14px 16px", position:"relative", overflow:"hidden" }}>
                   <div style={{ position:"absolute", top:-15, right:-15, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,0.18)" }} />
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -402,8 +455,8 @@ export default function App() {
                       <div style={{ fontSize:22, fontWeight:900, color:"#2D8A5E" }}>HK${cls.price}</div>
                     </div>
                     <div style={{ textAlign:"right" }}>
-                      <div style={{ fontSize:11, fontWeight:800, color:"#52A878" }}>⏰ {cls.time}</div>
-                      <div style={{ fontSize:11, fontWeight:800, color:"#52A878", marginTop:2 }}>📅 {getDatesForClass(cls.id).length} 個日期</div>
+                      <div style={{ fontSize:11, fontWeight:800, color:"#52A878" }}>⏰ {cls.times ? cls.times.join(" / ") : cls.time}</div>
+                      <div style={{ fontSize:11, fontWeight:800, color:"#52A878", marginTop:2 }}>📅 {getSlotsForActivity(cls.name).length} 個時段</div>
                     </div>
                   </div>
                   <div style={{ display:"flex", justifyContent:"flex-end" }}>
@@ -432,7 +485,7 @@ export default function App() {
                 <div style={{ marginLeft:"auto", fontSize:32 }}>{selectedClass.sticker}</div>
               </div>
               <div style={{ display:"flex", gap:6, marginTop:10, flexWrap:"wrap" }}>
-                {[{i:"⏰",t:selectedClass.time},{i:"⏱",t:selectedClass.duration},{i:"🪑",t:"每堂 "+selectedClass.totalSeats+" 個座位"}].map(p => (
+                {[{i:"⏰",t: (selectedClass.times ? selectedClass.times.join(" / ") : selectedClass.time)},{i:"⏱",t:selectedClass.duration},{i:"🪑",t:"每堂 "+selectedClass.totalSeats+" 個座位"}].map(p => (
                   <span key={p.t} style={{ background:"rgba(255,255,255,0.42)", borderRadius:10, padding:"2px 9px", fontSize:11, fontWeight:800, color:"rgba(0,0,0,0.65)" }}>{p.i} {p.t}</span>
                 ))}
               </div>
@@ -445,14 +498,14 @@ export default function App() {
               </div>
             </div>
           </div>
-          <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:15, fontWeight:800, color:"#2D8A5E", marginBottom:10 }}>📅 選擇上課日期</div>
+          <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:15, fontWeight:800, color:"#2D8A5E", marginBottom:10 }}>📅 選擇日期同時間</div>
           <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            {getDatesForClass(selectedClass.id).map((d,i) => {
-              const booked = isBooked(selectedClass.id, d.date);
+            {getSlotsForActivity(selectedClass.name).map((d,i) => {
+              const booked = isBooked(d.courseId, d.date);
               const full = d.seats === 0;
-              const pct = ((selectedClass.totalSeats - d.seats) / selectedClass.totalSeats) * 100;
+              const pct = ((d.totalSeats - d.seats) / d.totalSeats) * 100;
               return (
-                <div key={d.date} className="date-card" style={{ background:"#fff", borderRadius:18, padding:"12px 14px", boxShadow:"0 3px 14px rgba(0,0,0,0.07)", border:booked?"2.5px solid #52B788":full?"2.5px solid #eee":"2.5px solid #E8F5EE", animationDelay:(i*0.07)+"s" }}>
+                <div key={d.courseId + "_" + d.date} className="date-card" style={{ background:"#fff", borderRadius:18, padding:"12px 14px", boxShadow:"0 3px 14px rgba(0,0,0,0.07)", border:booked?"2.5px solid #52B788":full?"2.5px solid #eee":"2.5px solid #E8F5EE", animationDelay:(i*0.07)+"s" }}>
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                       <div style={{ width:48, height:48, borderRadius:14, background:booked?"linear-gradient(135deg,#B5E48C,#52B788)":full?"#f0f0f0":selectedClass.bg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
@@ -460,13 +513,14 @@ export default function App() {
                       </div>
                       <div>
                         <div style={{ fontWeight:900, fontSize:14, color:full&&!booked?"#bbb":"#1B4D32" }}>{d.date} ({d.day})</div>
+                        <div style={{ fontSize:12, fontWeight:700, color:"#52A878", marginTop:1 }}>⏰ {d.time}</div>
                         <div style={{ fontSize:12, fontWeight:700, color:seatColor(d.seats), marginTop:1 }}>{booked?"✅ 已預約":seatLabel(d.seats)}</div>
                       </div>
                     </div>
                     <div style={{ textAlign:"right" }}>
                       {!booked && !full && (
                         <div>
-                          <div style={{ fontSize:13, fontWeight:900, color:"#2D8A5E", marginBottom:5 }}>HK${selectedClass.price}</div>
+                          <div style={{ fontSize:13, fontWeight:900, color:"#2D8A5E", marginBottom:5 }}>HK${d.price || selectedClass.price}</div>
                           <button className="bookbtn" onClick={() => openBooking(d)} style={{ background:"linear-gradient(135deg,#52B788,#2D8A5E)", color:"#fff", border:"none", borderRadius:12, padding:"7px 14px", fontWeight:900, fontSize:12, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 3px 10px rgba(45,138,94,0.35)", whiteSpace:"nowrap" }}>立即預約</button>
                         </div>
                       )}
