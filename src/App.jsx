@@ -55,6 +55,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [paymentPending, setPaymentPending] = useState(null);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   // Auth listener
   useEffect(() => {
@@ -263,7 +264,8 @@ export default function App() {
   };
 
   const confirmPayment = async () => {
-    if (!paymentPending) return;
+    if (!paymentPending || confirmingPayment) return;
+    setConfirmingPayment(true);
     try {
       const docRef = await addDoc(collection(db, "bookings"), {...paymentPending, confirmedAt: new Date().toISOString()});
       await fetch(SHEETS_URL, { method:"POST", body: JSON.stringify({action:"addBooking", ...paymentPending}) }).catch(e => {});
@@ -271,6 +273,7 @@ export default function App() {
     } catch(e) { console.log(e); }
     const t = paymentPending;
     setPaymentPending(null);
+    setConfirmingPayment(false);
     setToast({ name:t.className, date:t.date, price:t.price });
     setTimeout(() => setToast(null), 3500);
   };
@@ -418,7 +421,9 @@ export default function App() {
           <div style={{ fontSize:12, fontWeight:700, color:"#AA7700", marginBottom:12 }}>請完成付款後，點擊下方按鈕確認預約 👇</div>
           <div style={{ display:"flex", gap:8 }}>
             <button onClick={() => window.open(PAYMENT_URL,"_blank")} style={{ flex:1, padding:"11px", borderRadius:14, border:"2px solid #FFD066", background:"#fff", color:"#CC8800", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>重新付款 💳</button>
-            <button onClick={confirmPayment} style={{ flex:2, padding:"11px", borderRadius:14, border:"none", background:"linear-gradient(135deg,#FFD166,#FF9500)", color:"#fff", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"'Baloo 2',cursive" }}>✅ 我已付款，確認預約！</button>
+            <button onClick={confirmPayment} disabled={confirmingPayment} style={{ flex:2, padding:"11px", borderRadius:14, border:"none", background: confirmingPayment ? "#ccc" : "linear-gradient(135deg,#FFD166,#FF9500)", color:"#fff", fontWeight:900, fontSize:13, cursor: confirmingPayment ? "not-allowed" : "pointer", fontFamily:"'Baloo 2',cursive", opacity: confirmingPayment ? 0.7 : 1 }}>
+              {confirmingPayment ? "⏳ 確認中..." : "✅ 我已付款，確認預約！"}
+            </button>
           </div>
           <button onClick={() => setPaymentPending(null)} style={{ width:"100%", marginTop:8, padding:"8px", borderRadius:12, border:"none", background:"none", color:"#ccc", fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>取消此預約</button>
         </div>
