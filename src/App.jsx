@@ -434,6 +434,26 @@ export default function App() {
               ))}
             </div>
           </div>
+          {/* September Mid-Autumn banner */}
+          <div style={{
+            background: "linear-gradient(135deg,#5A189A,#9B5DE5,#FF6B35)",
+            borderRadius: 18,
+            padding: "14px 16px",
+            marginBottom: 14,
+            position: "relative",
+            overflow: "hidden",
+            boxShadow: "0 4px 16px rgba(155,93,229,0.3)"
+          }}>
+            <div style={{ position:"absolute", top:-10, right:10, fontSize:42, opacity:0.25 }}>🥮</div>
+            <div style={{ position:"absolute", bottom:-8, left:20, fontSize:28, opacity:0.2 }}>🐇</div>
+            <div style={{ position:"absolute", top:8, right:50, fontSize:22, opacity:0.3 }}>🌕</div>
+            <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:17, fontWeight:800, color:"#fff", position:"relative" }}>
+              🎃 九月中秋特別課程
+            </div>
+            <div style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,0.9)", marginTop:3, position:"relative" }}>
+              🏮 5/9 – 27/9 ｜ 傳統 × 夜光中秋體驗 ✨
+            </div>
+          </div>
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             {groupedActivities.map((cls,i) => (
               <div key={cls.name} className="card" onClick={() => openClass(cls)} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", animationDelay:(i*0.06)+"s", background:"#fff", cursor:"pointer" }}>
