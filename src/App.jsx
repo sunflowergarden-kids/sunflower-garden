@@ -305,10 +305,18 @@ export default function App() {
   const loadTutorData = async () => {
     setTutorLoading(true);
     try {
-      // reuse courses + dates
       await loadData();
-      const res = await fetch(SHEETS_URL + "?action=getBookings");
-      const data = await res.json();
+      // 用 JSONP（同 loadData），避免 CORS
+      const data = await new Promise((resolve, reject) => {
+        const cb = "cb_" + Math.random().toString(36).slice(2);
+        const script = document.createElement("script");
+        let done = false;
+        window[cb] = (d) => { if(done)return; done=true; resolve(d); delete window[cb]; script.remove(); };
+        script.onerror = () => { if(done)return; done=true; reject(new Error("error")); delete window[cb]; script.remove(); };
+        script.src = SHEETS_URL + "?action=getBookings&callback=" + cb + "&t=" + Date.now();
+        setTimeout(() => { if(!done){ done=true; reject(new Error("timeout")); delete window[cb]; script.remove(); }}, 10000);
+        document.head.appendChild(script);
+      });
       setTutorBookings(Array.isArray(data) ? data : []);
     } catch(e) {
       console.log(e);
