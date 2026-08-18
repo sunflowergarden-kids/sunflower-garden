@@ -667,7 +667,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-              {[{label:"🧒 小朋友姓名",key:"child",ph:"例如：陳小明",req:true},{label:"📱 聯絡電話",key:"phone2",ph:"例如：9123 4567",req:true},{label:"👩 家長／監護人姓名",key:"parent",ph:"例如：陳美玲",req:false},{label:"🎂 小朋友年齡",key:"age",ph:"例如：4歲",req:false}].map(f => (
+              {[{label:"🧒 小朋友姓名",key:"child",ph:"例如：陳小明",req:true},{label:"🎂 小朋友年齡",key:"age",ph:"例如：4歲",req:false},{label:"📱 聯絡電話",key:"phone2",ph:"例如：9123 4567",req:true},{label:"👩 家長／監護人姓名",key:"parent",ph:"例如：陳美玲",req:false}].map(f => (
                 <div key={f.key}>
                   <label style={{ fontSize:11, fontWeight:900, color:"#2D8A5E", display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:0.8 }}>{f.label}{f.req?" *":""}</label>
                   <input type={f.key==="phone2"?"tel":"text"} placeholder={f.ph} value={form[f.key]} onChange={e => setForm(p => ({...p,[f.key]:e.target.value}))} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:form[f.key]?"2.5px solid #52B788":"2.5px solid #C8EDD8", fontSize:14, fontWeight:700, color:"#1B4D32", background:"#fff", boxSizing:"border-box" }} />
