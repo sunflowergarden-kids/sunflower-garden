@@ -458,8 +458,7 @@ export default function App() {
                       <div style={{ fontSize:22, fontWeight:900, color:"#2D8A5E" }}>HK${cls.price}</div>
                     </div>
                     <div style={{ textAlign:"right" }}>
-                      <div style={{ fontSize:11, fontWeight:800, color:"#52A878" }}>⏰ {cls.times ? cls.times.join(" / ") : cls.time}</div>
-                      <div style={{ fontSize:11, fontWeight:800, color:"#52A878", marginTop:2 }}>📅 {getSlotsForActivity(cls.name).length} 個時段</div>
+                      <div style={{ fontSize:11, fontWeight:800, color:"#52A878" }}>📅 {getSlotsForActivity(cls.name).length} 個時段</div>
                     </div>
                   </div>
                   <div style={{ display:"flex", justifyContent:"flex-end" }}>
