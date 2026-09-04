@@ -116,7 +116,7 @@ export default function App() {
       }
     } catch(e) {}
     window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-      size: "normal",
+      size: "invisible",
       callback: () => { console.log("reCAPTCHA solved"); },
       "expired-callback": () => { window.recaptchaVerifier = null; }
     });
@@ -127,9 +127,12 @@ export default function App() {
     setAuthLoading(true); setAuthError("");
     try {
       setupRecaptcha();
-      await window.recaptchaVerifier.render();
       const fullPhone = phone.startsWith("+") ? phone : "+852" + phone;
-      const result = await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
+      const sendPromise = signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject({ code: "auth/timeout", message: "timeout" }), 20000)
+      );
+      const result = await Promise.race([sendPromise, timeoutPromise]);
       setConfirmResult(result);
       setAuthStep("otp");
     } catch(e) {
@@ -140,8 +143,10 @@ export default function App() {
         setAuthError("請求次數過多，請稍後再試");
       } else if (e.code === "auth/invalid-phone-number") {
         setAuthError("電話號碼格式不正確");
+      } else if (e.code === "auth/timeout") {
+        setAuthError("發送逾時，請用 Safari 打開再試（唔好用 WhatsApp 內置瀏覽器）");
       } else {
-        setAuthError("發送驗證碼失敗：" + e.code);
+        setAuthError("發送驗證碼失敗：" + (e.code || "請稍後再試"));
       }
     }
     setAuthLoading(false);
@@ -503,7 +508,7 @@ export default function App() {
     return (
       <div style={{ fontFamily:"'Nunito','PingFang HK',sans-serif", minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px", background:"linear-gradient(160deg,#F0FAF2,#E0F5E8)" }}>
         <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet" />
-        <div id="recaptcha-container" style={{ margin:"16px auto", display:"flex", justifyContent:"center" }}></div>
+        <div id="recaptcha-container" style={{ height:0, overflow:"hidden" }}></div>
         <div style={{ width:90, height:90, borderRadius:"50%", overflow:"hidden", marginBottom:20, boxShadow:"0 6px 24px rgba(45,138,94,0.3)" }}>
           <img src={"data:image/png;base64," + LOGO_B64} alt="logo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
         </div>
@@ -514,7 +519,7 @@ export default function App() {
           {authStep === "phone" && (
             <div>
               <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:18, fontWeight:800, color:"#2D8A5E", marginBottom:6 }}>📱 家長登入</div>
-              <div style={{ fontSize:13, fontWeight:600, color:"#888", marginBottom:20 }}>輸入手機號碼，我們將發送驗證碼</div>
+              <div style={{ fontSize:13, fontWeight:600, color:"#888", marginBottom:20 }}>輸入手機號碼，我們將發送驗證碼。請用 Safari／Chrome 打開，避免用 WhatsApp 內置瀏覽器。</div>
               <label style={{ fontSize:11, fontWeight:900, color:"#2D8A5E", textTransform:"uppercase", letterSpacing:0.8 }}>香港手機號碼</label>
               <div style={{ display:"flex", gap:8, marginTop:6, marginBottom:16 }}>
                 <div style={{ background:"#F0FAF2", borderRadius:12, padding:"12px 14px", fontSize:14, fontWeight:800, color:"#2D8A5E", flexShrink:0 }}>🇭🇰 +852</div>
