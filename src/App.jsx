@@ -591,8 +591,8 @@ export default function App() {
       <div style={{ background:"linear-gradient(145deg,#52B788,#2D8A5E,#1B5E42)", padding:"24px 20px 28px", borderRadius:"0 0 32px 32px", boxShadow:"0 8px 32px rgba(29,110,70,0.38)", position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:-50, right:-30, width:170, height:170, borderRadius:"50%", background:"rgba(255,255,255,0.09)" }} />
         <div style={{ position:"relative", display:"flex", alignItems:"center", gap:14 }}>
-          <div style={{ width:66, height:66, borderRadius:"50%", overflow:"hidden", flexShrink:0, background:"#F6F1E6", boxShadow:"0 6px 20px rgba(0,0,0,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <img src={"data:image/png;base64,"+LOGO_B64} alt="Sunflower Garden" style={{ width:"86%", height:"86%", objectFit:"contain", objectPosition:"center" }} />
+          <div className="sun-pulse" style={{ width:66, height:66, borderRadius:"50%", overflow:"hidden", flexShrink:0, boxShadow:"0 6px 20px rgba(0,0,0,0.2)", background:"transparent" }}>
+            <img src={"data:image/png;base64,"+LOGO_B64} alt="Sunflower Garden" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
           </div>
           <div>
             <div style={{ background:"rgba(255,255,255,0.2)", borderRadius:20, padding:"2px 12px", display:"inline-block", marginBottom:4 }}>
