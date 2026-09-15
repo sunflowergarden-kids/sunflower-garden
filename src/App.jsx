@@ -77,24 +77,69 @@ export default function App() {
   }, []);
 
   const loadData = async () => {
+    const CACHE_C = "sg_cache_courses";
+    const CACHE_D = "sg_cache_dates";
+    const mapCourses = (cData) => (Array.isArray(cData)?cData:[]).map((c,i) => ({...c, id:String(c.id), price:Number(c.price), totalSeats:Number(c.totalSeats), bg:c.bg||DEFAULT_BG[i%DEFAULT_BG.length]}));
+    const mapDates = (dData) => (Array.isArray(dData)?dData:[]).map(d => ({...d, courseId:String(d.courseId), seats:Number(d.seats)}));
+
+    const loadSheetOnce = (action) => new Promise((resolve, reject) => {
+      const cb = "cb_" + Math.random().toString(36).slice(2);
+      const script = document.createElement("script");
+      let done = false;
+      const finish = (fn, val) => { if(done)return; done=true; try{ delete window[cb]; }catch(e){} try{ script.remove(); }catch(e){} fn(val); };
+      window[cb] = (data) => finish(resolve, data);
+      script.onerror = () => finish(reject, new Error("error"));
+      script.src = SHEETS_URL + "?action=" + action + "&callback=" + cb + "&t=" + Date.now();
+      setTimeout(() => finish(reject, new Error("timeout")), 25000);
+      document.head.appendChild(script);
+    });
+
+    const loadSheet = async (action) => {
+      let lastErr;
+      for (let i = 0; i < 3; i++) {
+        try { return await loadSheetOnce(action); }
+        catch(e) { lastErr = e; await new Promise(r => setTimeout(r, 800 * (i+1))); }
+      }
+      throw lastErr || new Error("fail");
+    };
+
     try {
       setLoading(true);
       setError(null);
-      const loadSheet = (action) => new Promise((resolve, reject) => {
-        const cb = "cb_" + Math.random().toString(36).slice(2);
-        const script = document.createElement("script");
-        let done = false;
-        window[cb] = (data) => { if(done)return; done=true; resolve(data); delete window[cb]; script.remove(); };
-        script.onerror = () => { if(done)return; done=true; reject(new Error("error")); delete window[cb]; script.remove(); };
-        script.src = SHEETS_URL + "?action=" + action + "&callback=" + cb + "&t=" + Date.now();
-        setTimeout(() => { if(!done){ done=true; reject(new Error("timeout")); delete window[cb]; script.remove(); }}, 8000);
-        document.head.appendChild(script);
-      });
-      const [cData, dData] = await Promise.all([loadSheet("getCourses"), loadSheet("getDates")]);
-      setClasses((Array.isArray(cData)?cData:[]).map((c,i) => ({...c, id:String(c.id), price:Number(c.price), totalSeats:Number(c.totalSeats), bg:c.bg||DEFAULT_BG[i%DEFAULT_BG.length]})));
-      setAllDates((Array.isArray(dData)?dData:[]).map(d => ({...d, courseId:String(d.courseId), seats:Number(d.seats)})));
+      // 先用快取，避免一開 app 就空白
+      try {
+        const cc = JSON.parse(localStorage.getItem(CACHE_C) || "null");
+        const dd = JSON.parse(localStorage.getItem(CACHE_D) || "null");
+        if (Array.isArray(cc) && cc.length) setClasses(mapCourses(cc));
+        if (Array.isArray(dd) && dd.length) setAllDates(mapDates(dd));
+      } catch(e) {}
+
+      const results = await Promise.allSettled([loadSheet("getCourses"), loadSheet("getDates")]);
+      const cData = results[0].status === "fulfilled" ? results[0].value : null;
+      const dData = results[1].status === "fulfilled" ? results[1].value : null;
+
+      if (cData && Array.isArray(cData) && cData.length) {
+        setClasses(mapCourses(cData));
+        try { localStorage.setItem(CACHE_C, JSON.stringify(cData)); } catch(e) {}
+      }
+      if (dData && Array.isArray(dData)) {
+        setAllDates(mapDates(dData));
+        try { localStorage.setItem(CACHE_D, JSON.stringify(dData)); } catch(e) {}
+      }
+
+      const hasCourses = (cData && cData.length) || (JSON.parse(localStorage.getItem(CACHE_C) || "[]") || []).length;
+      if (!hasCourses) setError("無法載入課程資料，請稍後再試 🙏");
     } catch(e) {
-      setError("無法載入課程資料，請稍後再試 🙏");
+      try {
+        const cc = JSON.parse(localStorage.getItem(CACHE_C) || "null");
+        if (Array.isArray(cc) && cc.length) {
+          setClasses(mapCourses(cc));
+        } else {
+          setError("無法載入課程資料，請稍後再試 🙏");
+        }
+      } catch(err) {
+        setError("無法載入課程資料，請稍後再試 🙏");
+      }
     } finally {
       setLoading(false);
     }
@@ -591,8 +636,8 @@ export default function App() {
       <div style={{ background:"linear-gradient(145deg,#52B788,#2D8A5E,#1B5E42)", padding:"24px 20px 28px", borderRadius:"0 0 32px 32px", boxShadow:"0 8px 32px rgba(29,110,70,0.38)", position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:-50, right:-30, width:170, height:170, borderRadius:"50%", background:"rgba(255,255,255,0.09)" }} />
         <div style={{ position:"relative", display:"flex", alignItems:"center", gap:14 }}>
-          <div className="sun-pulse" style={{ width:66, height:66, borderRadius:"50%", overflow:"hidden", flexShrink:0, boxShadow:"0 6px 20px rgba(0,0,0,0.2)", background:"transparent" }}>
-            <img src={"data:image/png;base64,"+LOGO_B64} alt="Sunflower Garden" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+          <div style={{ width:66, height:66, borderRadius:"50%", overflow:"hidden", flexShrink:0, background:"#F6F1E6", boxShadow:"0 6px 20px rgba(0,0,0,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <img src={"data:image/png;base64,"+LOGO_B64} alt="Sunflower Garden" style={{ width:"86%", height:"86%", objectFit:"contain", objectPosition:"center" }} />
           </div>
           <div>
             <div style={{ background:"rgba(255,255,255,0.2)", borderRadius:20, padding:"2px 12px", display:"inline-block", marginBottom:4 }}>
