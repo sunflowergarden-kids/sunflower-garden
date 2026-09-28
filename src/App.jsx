@@ -55,6 +55,8 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [paymentPending, setPaymentPending] = useState(null);
+  const [showPaySheet, setShowPaySheet] = useState(false);
+  const [payFrameFailed, setPayFrameFailed] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [tutorMode, setTutorMode] = useState(false); // false | 'pin' | true
   const [tutorPin, setTutorPin] = useState("");
@@ -74,6 +76,36 @@ export default function App() {
       }
     });
     return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("sg_pending");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.className) {
+          setPaymentPending(parsed);
+          const q = new URLSearchParams(window.location.search);
+          if (q.get("paid") === "1") {
+            (async () => {
+              try {
+                const docRef = await addDoc(collection(db, "bookings"), {...parsed, confirmedAt: new Date().toISOString()});
+                await fetch(SHEETS_URL, { method:"POST", body: JSON.stringify({action:"addBooking", ...parsed}) }).catch(()=>{});
+                setBookings(p => [...p, {...parsed, docId:docRef.id}]);
+                setToast({ name:parsed.className, date:parsed.date, price:parsed.price });
+                setTimeout(() => setToast(null), 3500);
+              } catch(e) {}
+              setPaymentPending(null);
+              setShowPaySheet(false);
+              try { sessionStorage.removeItem("sg_pending"); } catch(e) {}
+              const url = new URL(window.location.href);
+              url.searchParams.delete("paid");
+              window.history.replaceState({}, "", url.pathname + url.search);
+            })();
+          }
+        }
+      }
+    } catch(e) {}
   }, []);
 
   const loadData = async () => {
@@ -102,6 +134,19 @@ export default function App() {
       }
       throw lastErr || new Error("fail");
     };
+
+    const loadSheetQS = (action, qs) => new Promise((resolve, reject) => {
+      const cb = "sgcb_" + Date.now() + "_" + Math.random().toString(36).slice(2,7);
+      const script = document.createElement("script");
+      let done = false;
+      const finish = (fn, val) => { if(done)return; done=true; try{ delete window[cb]; }catch(e){} try{ script.remove(); }catch(e){} fn(val); };
+      window[cb] = (data) => finish(resolve, data);
+      script.onerror = () => finish(reject, new Error("error"));
+      script.src = SHEETS_URL + "?action=" + action + "&callback=" + cb + "&" + qs + "&t=" + Date.now();
+      setTimeout(() => finish(reject, new Error("timeout")), 25000);
+      document.head.appendChild(script);
+    });
+
 
     try {
       setLoading(true);
@@ -314,24 +359,65 @@ export default function App() {
       uid: user ? user.uid : "guest",
     };
     setPaymentPending(newBooking);
-    setSubmitting(false);
+    try { sessionStorage.setItem("sg_pending", JSON.stringify(newBooking)); } catch(e) {}
     setShowModal(false);
-    window.open(PAYMENT_URL, "_blank");
+    setSubmitting(false);
+    await startAirwallexCheckout(newBooking);
+  };
+
+  const loadAwSdk = () => new Promise((resolve, reject) => {
+    if (window.AirwallexComponentsSDK) return resolve(window.AirwallexComponentsSDK);
+    const s = document.createElement("script");
+    s.src = "https://static.airwallex.com/components/sdk/v1/index.js";
+    s.onload = () => resolve(window.AirwallexComponentsSDK);
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+
+  const startAirwallexCheckout = async (booking) => {
+    try {
+      setShowPaySheet(true);
+      const orderId = "SG-" + Date.now();
+      const qs = "amount=" + encodeURIComponent(booking.price) + "&orderId=" + encodeURIComponent(orderId);
+      const pay = await new Promise((resolve, reject) => {
+        const cb = "sgpay_" + Date.now();
+        const script = document.createElement("script");
+        let done = false;
+        const finish = (fn, val) => { if(done)return; done=true; try{ delete window[cb]; }catch(e){} try{ script.remove(); }catch(e){} fn(val); };
+        window[cb] = (data) => finish(resolve, data);
+        script.onerror = () => finish(reject, new Error("pay api error"));
+        script.src = SHEETS_URL + "?action=createPay&callback=" + cb + "&" + qs + "&t=" + Date.now();
+        setTimeout(() => finish(reject, new Error("timeout")), 25000);
+        document.head.appendChild(script);
+      });
+      if (!pay || !pay.ok || !pay.id || !pay.client_secret) {
+        alert("未能開付款單：" + ((pay && pay.error) || "請稍後再試"));
+        return;
+      }
+      try { sessionStorage.setItem("sg_pending", JSON.stringify({...booking, orderId, intentId: pay.id})); } catch(e) {}
+      const sdk = await loadAwSdk();
+      const { payments } = await sdk.init({ env: "prod", enabledElements: ["payments"] });
+      payments.redirectToCheckout({
+        env: "prod",
+        mode: "payment",
+        currency: "HKD",
+        country_code: "HK",
+        intent_id: pay.id,
+        client_secret: pay.client_secret,
+        successUrl: "https://sunflower-garden-theta.vercel.app/?paid=1"
+      });
+    } catch(e) {
+      console.log(e);
+      alert("付款頁打不開，請再試一次");
+    }
   };
 
   const confirmPayment = async () => {
-    if (!paymentPending || confirmingPayment) return;
-    setConfirmingPayment(true);
-    try {
-      const docRef = await addDoc(collection(db, "bookings"), {...paymentPending, confirmedAt: new Date().toISOString()});
-      await fetch(SHEETS_URL, { method:"POST", body: JSON.stringify({action:"addBooking", ...paymentPending}) }).catch(e => {});
-      setBookings(p => [...p, {...paymentPending, docId:docRef.id}]);
-    } catch(e) { console.log(e); }
-    const t = paymentPending;
+    // 預約已入系統，呢度只係關閉付款層
+    setShowPaySheet(false);
     setPaymentPending(null);
+    try { sessionStorage.removeItem("sg_pending"); } catch(e) {}
     setConfirmingPayment(false);
-    setToast({ name:t.className, date:t.date, price:t.price });
-    setTimeout(() => setToast(null), 3500);
   };
 
   const cancelBooking = async (key, id, docId, classId, date) => {
@@ -671,6 +757,43 @@ export default function App() {
         ))}
       </div>
 
+      {/* IN-PAGE PAY SHEET */}
+      {showPaySheet && paymentPending && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(20,40,30,0.55)", zIndex:80, display:"flex", flexDirection:"column", padding:"12px 12px 20px" }}>
+          <div style={{ background:"#fff", borderRadius:22, overflow:"hidden", display:"flex", flexDirection:"column", height:"100%", maxWidth:560, width:"100%", margin:"0 auto", boxShadow:"0 16px 50px rgba(0,0,0,0.25)" }}>
+            <div style={{ padding:"14px 16px 10px", background:"linear-gradient(135deg,#2D6A4F,#52B788)", color:"#fff" }}>
+              <div style={{ fontFamily:"'Baloo 2',cursive", fontWeight:800, fontSize:18 }}>付款 HK${paymentPending.price}</div>
+              <div style={{ fontSize:12, fontWeight:700, opacity:0.9 }}>{paymentPending.className} · {paymentPending.date} {paymentPending.time||""}</div>
+            </div>
+            <div style={{ flex:1, minHeight:280, background:"#f7f7f7", position:"relative" }}>
+              {!payFrameFailed ? (
+                <iframe
+                  title="Airwallex Pay"
+                  src={PAYMENT_URL}
+                  style={{ border:"none", width:"100%", height:"100%", minHeight:360 }}
+                  onLoad={() => {}}
+                />
+              ) : (
+                <div style={{ padding:24, textAlign:"center" }}>
+                  <div style={{ fontSize:15, fontWeight:800, color:"#2D6A4F", marginBottom:8 }}>付款頁未能內嵌</div>
+                  <div style={{ fontSize:13, color:"#666", marginBottom:16 }}>請撳下面開啟付款，完成後會返呢頁自動確認。</div>
+                  <button onClick={() => { window.location.href = PAYMENT_URL; }} style={{ padding:"12px 18px", border:"none", borderRadius:14, background:"#2D6A4F", color:"#fff", fontWeight:800, fontFamily:"inherit" }}>前往付款</button>
+                </div>
+              )}
+            </div>
+            <div style={{ padding:"12px 14px 16px", borderTop:"1px solid #eee" }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"#888", marginBottom:8 }}>預約已登記。請完成付款即可，唔使再返嚟撳確認。</div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => setShowPaySheet(false)} style={{ flex:1, padding:"11px", borderRadius:14, border:"2px solid #C8EDD8", background:"#fff", color:"#5B8A72", fontWeight:800, fontFamily:"inherit" }}>稍後</button>
+                <button onClick={confirmPayment} disabled={confirmingPayment} style={{ flex:2, padding:"11px", borderRadius:14, border:"none", background: confirmingPayment ? "#ccc" : "linear-gradient(135deg,#52B788,#2D6A4F)", color:"#fff", fontWeight:800, fontFamily:"inherit" }}>
+                  完成
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* PAYMENT PENDING BANNER */}
       {paymentPending && (
         <div style={{ margin:"12px 14px 0", background:"linear-gradient(135deg,#FFF8E0,#FFF0C0)", borderRadius:20, padding:"16px", border:"2px solid #FFD066" }}>
@@ -681,11 +804,11 @@ export default function App() {
               <div style={{ fontSize:12, fontWeight:700, color:"#AA7700" }}>{paymentPending.className} · {paymentPending.date} · HK${paymentPending.price}</div>
             </div>
           </div>
-          <div style={{ fontSize:12, fontWeight:700, color:"#AA7700", marginBottom:12 }}>請完成付款後，點擊下方按鈕確認預約 👇</div>
+          <div style={{ fontSize:12, fontWeight:700, color:"#AA7700", marginBottom:12 }}>預約已登記。如未完成付款，可再打開付款頁。</div>
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={() => window.open(PAYMENT_URL,"_blank")} style={{ flex:1, padding:"11px", borderRadius:14, border:"2px solid #FFD066", background:"#fff", color:"#CC8800", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>重新付款 💳</button>
+            <button onClick={() => { setPayFrameFailed(false); setShowPaySheet(true); }} style={{ flex:1, padding:"11px", borderRadius:14, border:"2px solid #FFD066", background:"#fff", color:"#CC8800", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>重新付款 💳</button>
             <button onClick={confirmPayment} disabled={confirmingPayment} style={{ flex:2, padding:"11px", borderRadius:14, border:"none", background: confirmingPayment ? "#ccc" : "linear-gradient(135deg,#FFD166,#FF9500)", color:"#fff", fontWeight:900, fontSize:13, cursor: confirmingPayment ? "not-allowed" : "pointer", fontFamily:"'Baloo 2',cursive", opacity: confirmingPayment ? 0.7 : 1 }}>
-              {confirmingPayment ? "⏳ 確認中..." : "✅ 我已付款，確認預約！"}
+              完成
             </button>
           </div>
           <button onClick={() => setPaymentPending(null)} style={{ width:"100%", marginTop:8, padding:"8px", borderRadius:12, border:"none", background:"none", color:"#ccc", fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>取消此預約</button>
@@ -986,8 +1109,8 @@ export default function App() {
             <div style={{ background:"linear-gradient(135deg,#FFF8E0,#FFF0C0)", borderRadius:14, padding:"12px 14px", marginTop:14, border:"1.5px solid #FFE08A", display:"flex", alignItems:"center", gap:10 }}>
               <span style={{ fontSize:22 }}>💳</span>
               <div>
-                <div style={{ fontSize:12, fontWeight:900, color:"#CC8800" }}>點擊確認後將跳至付款頁面</div>
-                <div style={{ fontSize:11, fontWeight:700, color:"#AA7700", marginTop:2 }}>付款完成後記得點「我已付款」✅</div>
+                <div style={{ fontSize:12, fontWeight:900, color:"#CC8800" }}>確認後會喺呢頁付款</div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#AA7700", marginTop:2 }}>預約已登記，完成付款即可</div>
               </div>
             </div>
             <div style={{ display:"flex", gap:10, marginTop:12 }}>
