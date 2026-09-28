@@ -56,6 +56,7 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false);
   const [paymentPending, setPaymentPending] = useState(null);
   const [showPaySheet, setShowPaySheet] = useState(false);
+  useEffect(() => { loadAwSdk().catch(()=>{}); }, []);
   const [payFrameFailed, setPayFrameFailed] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [tutorMode, setTutorMode] = useState(false); // false | 'pin' | true
@@ -366,10 +367,21 @@ export default function App() {
   };
 
   const loadAwSdk = () => new Promise((resolve, reject) => {
-    if (window.AirwallexComponentsSDK) return resolve(window.AirwallexComponentsSDK);
+    if (window.__awSdkReady) return resolve(window.__awSdkReady);
+    if (window.AirwallexComponentsSDK) {
+      window.AirwallexComponentsSDK.init({ env: "prod", enabledElements: ["payments"] })
+        .then(sdk => { window.__awSdkReady = sdk; resolve(sdk); })
+        .catch(reject);
+      return;
+    }
     const s = document.createElement("script");
     s.src = "https://static.airwallex.com/components/sdk/v1/index.js";
-    s.onload = () => resolve(window.AirwallexComponentsSDK);
+    s.async = true;
+    s.onload = () => {
+      window.AirwallexComponentsSDK.init({ env: "prod", enabledElements: ["payments"] })
+        .then(sdk => { window.__awSdkReady = sdk; resolve(sdk); })
+        .catch(reject);
+    };
     s.onerror = reject;
     document.head.appendChild(s);
   });
@@ -396,7 +408,7 @@ export default function App() {
       }
       try { sessionStorage.setItem("sg_pending", JSON.stringify({...booking, orderId, intentId: pay.id})); } catch(e) {}
       const sdk = await loadAwSdk();
-      const { payments } = await sdk.init({ env: "prod", enabledElements: ["payments"] });
+      const payments = sdk.payments || (await window.AirwallexComponentsSDK.init({ env: "prod", enabledElements: ["payments"] })).payments;
       payments.redirectToCheckout({
         env: "prod",
         mode: "payment",
@@ -764,38 +776,12 @@ export default function App() {
       </div>
 
       {/* IN-PAGE PAY SHEET */}
-      {showPaySheet && paymentPending && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(20,40,30,0.55)", zIndex:80, display:"flex", flexDirection:"column", padding:"12px 12px 20px" }}>
-          <div style={{ background:"#fff", borderRadius:22, overflow:"hidden", display:"flex", flexDirection:"column", height:"100%", maxWidth:560, width:"100%", margin:"0 auto", boxShadow:"0 16px 50px rgba(0,0,0,0.25)" }}>
-            <div style={{ padding:"14px 16px 10px", background:"linear-gradient(135deg,#2D6A4F,#52B788)", color:"#fff" }}>
-              <div style={{ fontFamily:"'Baloo 2',cursive", fontWeight:800, fontSize:18 }}>付款 HK${paymentPending.price}</div>
-              <div style={{ fontSize:12, fontWeight:700, opacity:0.9 }}>{paymentPending.className} · {paymentPending.date} {paymentPending.time||""}</div>
-            </div>
-            <div style={{ flex:1, minHeight:280, background:"#f7f7f7", position:"relative" }}>
-              {!payFrameFailed ? (
-                <iframe
-                  title="Airwallex Pay"
-                  src={PAYMENT_URL}
-                  style={{ border:"none", width:"100%", height:"100%", minHeight:360 }}
-                  onLoad={() => {}}
-                />
-              ) : (
-                <div style={{ padding:24, textAlign:"center" }}>
-                  <div style={{ fontSize:15, fontWeight:800, color:"#2D6A4F", marginBottom:8 }}>付款頁未能內嵌</div>
-                  <div style={{ fontSize:13, color:"#666", marginBottom:16 }}>請撳下面開啟付款，完成後會返呢頁自動確認。</div>
-                  <button onClick={() => { window.location.href = PAYMENT_URL; }} style={{ padding:"12px 18px", border:"none", borderRadius:14, background:"#2D6A4F", color:"#fff", fontWeight:800, fontFamily:"inherit" }}>前往付款</button>
-                </div>
-              )}
-            </div>
-            <div style={{ padding:"12px 14px 16px", borderTop:"1px solid #eee" }}>
-              <div style={{ fontSize:12, fontWeight:700, color:"#888", marginBottom:8 }}>預約已登記。請完成付款即可，唔使再返嚟撳確認。</div>
-              <div style={{ display:"flex", gap:8 }}>
-                <button onClick={() => setShowPaySheet(false)} style={{ flex:1, padding:"11px", borderRadius:14, border:"2px solid #C8EDD8", background:"#fff", color:"#5B8A72", fontWeight:800, fontFamily:"inherit" }}>稍後</button>
-                <button onClick={confirmPayment} disabled={confirmingPayment} style={{ flex:2, padding:"11px", borderRadius:14, border:"none", background: confirmingPayment ? "#ccc" : "linear-gradient(135deg,#52B788,#2D6A4F)", color:"#fff", fontWeight:800, fontFamily:"inherit" }}>
-                  完成
-                </button>
-              </div>
-            </div>
+      {showPaySheet && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(27,67,50,0.45)", zIndex:80, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:"#fff", borderRadius:22, padding:"28px 22px", width:"100%", maxWidth:320, textAlign:"center", boxShadow:"0 12px 40px rgba(0,0,0,0.18)" }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>💳</div>
+            <div style={{ fontFamily:"'Baloo 2',cursive", fontWeight:800, fontSize:18, color:"#1B4332" }}>正在開啟付款頁</div>
+            <div style={{ fontSize:13, color:"#5B8A72", marginTop:6, fontWeight:700 }}>請稍候，唔好重複撳</div>
           </div>
         </div>
       )}
