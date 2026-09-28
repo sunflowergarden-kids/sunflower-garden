@@ -404,7 +404,13 @@ export default function App() {
         country_code: "HK",
         intent_id: pay.id,
         client_secret: pay.client_secret,
-        successUrl: "https://sunflower-garden-theta.vercel.app/?paid=1"
+        successUrl: "https://sunflower-garden-theta.vercel.app/?paid=1",
+        applePayRequestOptions: {
+          countryCode: "HK",
+          buttonType: "buy",
+          buttonColor: "black",
+          totalPriceLabel: "Sunflower Garden"
+        }
       });
     } catch(e) {
       console.log(e);
