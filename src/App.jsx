@@ -849,10 +849,10 @@ export default function App() {
             <div style={{ position:"absolute", bottom:-8, left:20, fontSize:28, opacity:0.2 }}>🐇</div>
             <div style={{ position:"absolute", top:8, right:50, fontSize:22, opacity:0.3 }}>🌕</div>
             <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:17, fontWeight:800, color:"#fff", position:"relative" }}>
-              🎃 九月中秋特別課程
+              🎃 十月萬聖節課程
             </div>
             <div style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,0.9)", marginTop:3, position:"relative" }}>
-              🏮 5/9 – 27/9 ｜ 傳統 × 夜光中秋體驗 ✨
+              🍬 10/10 – 1/11 ｜ 繪本 · 感官 · 烘焙 ✨
             </div>
           </div>
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
