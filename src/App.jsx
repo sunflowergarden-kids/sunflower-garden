@@ -839,18 +839,18 @@ export default function App() {
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             <div onClick={() => setLangChoice("zh")} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", background:"#fff", cursor:"pointer" }}>
               <div style={{ background:"linear-gradient(135deg,#52B788,#2D8A5E)", padding:"22px 18px", position:"relative", overflow:"hidden" }}>
-                <div style={{ position:"absolute", top:-12, right:10, fontSize:48, opacity:0.22 }}>🌻</div>
-                <div style={{ fontSize:28 }}>🇭🇰</div>
-                <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:22, fontWeight:800, color:"#fff", marginTop:6 }}>中文班</div>
+                <div style={{ position:"absolute", top:-8, right:16, fontSize:56, opacity:0.28 }}>🌻</div>
+                <div style={{ width:56, height:56, borderRadius:18, background:"rgba(255,255,255,0.28)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:30 }}>🐼</div>
+                <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:22, fontWeight:800, color:"#fff", marginTop:8 }}>中文班</div>
                 <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.92)", marginTop:4 }}>感官 · 繪本 · 烘焙</div>
               </div>
             </div>
             <div onClick={() => setLangChoice("en")} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", background:"#fff", cursor:"pointer" }}>
-              <div style={{ background:"linear-gradient(135deg,#7B2CBF,#5A189A)", padding:"22px 18px", position:"relative", overflow:"hidden" }}>
-                <div style={{ position:"absolute", top:-12, right:10, fontSize:48, opacity:0.22 }}>📚</div>
-                <div style={{ fontSize:28 }}>🇬🇧</div>
-                <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:22, fontWeight:800, color:"#fff", marginTop:6 }}>英文班</div>
-                <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.92)", marginTop:4 }}>NET 英文繪本 · 英文烘焙</div>
+              <div style={{ background:"linear-gradient(135deg,#E9C46A,#F4A261)", padding:"22px 18px", position:"relative", overflow:"hidden" }}>
+                <div style={{ position:"absolute", top:-8, right:16, fontSize:56, opacity:0.22 }}>🌙</div>
+                <div style={{ width:56, height:56, borderRadius:18, background:"rgba(255,255,255,0.38)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:30 }}>🦉</div>
+                <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:22, fontWeight:800, color:"#fff", marginTop:8 }}>英文班</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.95)", marginTop:4 }}>NET 英文繪本 · 英文烘焙</div>
               </div>
             </div>
           </div>
