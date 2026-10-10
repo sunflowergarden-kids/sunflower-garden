@@ -43,6 +43,7 @@ export default function App() {
   // App state
   const [activeTab, setActiveTab] = useState("browse");
   const [selectedCat, setSelectedCat] = useState("全部");
+  const [langChoice, setLangChoice] = useState(null); // null | "zh" | "en"
   const [classes, setClasses] = useState([]);
   const [allDates, setAllDates] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -257,7 +258,14 @@ export default function App() {
   };
 
   const getDatesForClass = (id) => allDates.filter(d => String(d.courseId) === String(id));
-  const filtered = classes.filter(c => selectedCat === "全部" || c.category === selectedCat);
+  const isEnglishClass = (c) => c.category === "英文班" || String(c.name || "").includes("英文");
+  const filtered = classes.filter(c => {
+    const catOk = selectedCat === "全部" || c.category === selectedCat;
+    if (!catOk) return false;
+    if (langChoice === "en") return isEnglishClass(c);
+    if (langChoice === "zh") return !isEnglishClass(c);
+    return true;
+  });
   // Group by activity name — one card per activity
   const groupedActivities = (() => {
     const map = {};
@@ -771,7 +779,7 @@ export default function App() {
           {key:"browse",icon:"🔍",label:"課程"},
           {key:"bookings",icon:"🌟",label:"預約"}
         ].map(t => (
-          <button key={t.key} onClick={() => { setActiveTab(t.key); setSelectedClass(null); if(t.key==="browse") setSelectedCat("全部"); }} style={{ flex:1, padding:"10px 6px", border:"none", borderRadius:20, background:activeTab===t.key?"linear-gradient(135deg,#52B788,#2D8A5E)":"#fff", color:activeTab===t.key?"#fff":"#A0C8B0", fontWeight:900, fontSize:12, cursor:"pointer", fontFamily:"inherit", boxShadow:activeTab===t.key?"0 4px 16px rgba(45,138,94,0.38)":"0 2px 8px rgba(0,0,0,0.06)", outline:"none", transition:"all 0.2s" }}>{t.icon} {t.label}</button>
+          <button key={t.key} onClick={() => { setActiveTab(t.key); setSelectedClass(null); if(t.key==="browse") { setSelectedCat("全部"); setLangChoice(null); } }} style={{ flex:1, padding:"10px 6px", border:"none", borderRadius:20, background:activeTab===t.key?"linear-gradient(135deg,#52B788,#2D8A5E)":"#fff", color:activeTab===t.key?"#fff":"#A0C8B0", fontWeight:900, fontSize:12, cursor:"pointer", fontFamily:"inherit", boxShadow:activeTab===t.key?"0 4px 16px rgba(45,138,94,0.38)":"0 2px 8px rgba(0,0,0,0.06)", outline:"none", transition:"all 0.2s" }}>{t.icon} {t.label}</button>
         ))}
       </div>
 
@@ -825,29 +833,46 @@ export default function App() {
       )}
 
       {/* BROWSE - Class List */}
-      {!loading && !error && (activeTab === "browse") && !selectedClass && (
+      {!loading && !error && (activeTab === "browse") && !selectedClass && !langChoice && (
         <div style={{ padding:"12px 14px 110px" }}>
-          {/* Category chips */}
-          <div style={{ overflowX:"auto", paddingBottom:8, marginBottom:14 }}>
-            <div style={{ display:"flex", gap:8, width:"max-content" }}>
-              {categories.map(cat => (
-                <button key={cat} className="chip" onClick={() => setSelectedCat(cat)} style={{ padding:"7px 14px", borderRadius:20, border:selectedCat===cat?"none":"2.5px solid #D4F0C0", background:selectedCat===cat?"linear-gradient(135deg,#52B788,#2D8A5E)":"#fff", color:selectedCat===cat?"#fff":"#52A878", fontSize:12, fontWeight:900, cursor:"pointer", fontFamily:"inherit", boxShadow:selectedCat===cat?"0 3px 10px rgba(45,138,94,0.35)":"none" }}>{cat}</button>
-              ))}
+          <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:18, fontWeight:800, color:"#1B4332", margin:"6px 4px 14px" }}>先揀班別語言</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            <div onClick={() => setLangChoice("zh")} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", background:"#fff", cursor:"pointer" }}>
+              <div style={{ background:"linear-gradient(135deg,#52B788,#2D8A5E)", padding:"22px 18px", position:"relative", overflow:"hidden" }}>
+                <div style={{ position:"absolute", top:-12, right:10, fontSize:48, opacity:0.22 }}>🌻</div>
+                <div style={{ fontSize:28 }}>🇭🇰</div>
+                <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:22, fontWeight:800, color:"#fff", marginTop:6 }}>中文班</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.92)", marginTop:4 }}>感官 · 繪本 · 烘焙</div>
+              </div>
+            </div>
+            <div onClick={() => setLangChoice("en")} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", background:"#fff", cursor:"pointer" }}>
+              <div style={{ background:"linear-gradient(135deg,#7B2CBF,#5A189A)", padding:"22px 18px", position:"relative", overflow:"hidden" }}>
+                <div style={{ position:"absolute", top:-12, right:10, fontSize:48, opacity:0.22 }}>📚</div>
+                <div style={{ fontSize:28 }}>🇬🇧</div>
+                <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:22, fontWeight:800, color:"#fff", marginTop:6 }}>英文班</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.92)", marginTop:4 }}>NET 英文繪本 · 英文烘焙</div>
+              </div>
             </div>
           </div>
-          {/* September Mid-Autumn banner */}
+        </div>
+      )}
+
+      {!loading && !error && (activeTab === "browse") && !selectedClass && langChoice && (
+        <div style={{ padding:"12px 14px 110px" }}>
+          <button onClick={() => setLangChoice(null)} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"#2D8A5E", fontWeight:900, fontSize:13, cursor:"pointer", padding:"4px 0 12px", fontFamily:"inherit" }}>← 返回選擇語言</button>
+          {/* October Halloween banner */}
           <div style={{
-            background: "linear-gradient(135deg,#5A189A,#9B5DE5,#FF6B35)",
+            background: "linear-gradient(135deg,#E85D04,#F4A261,#7B2CBF)",
             borderRadius: 18,
             padding: "14px 16px",
             marginBottom: 14,
             position: "relative",
             overflow: "hidden",
-            boxShadow: "0 4px 16px rgba(155,93,229,0.3)"
+            boxShadow: "0 4px 16px rgba(232,93,4,0.28)"
           }}>
-            <div style={{ position:"absolute", top:-10, right:10, fontSize:42, opacity:0.25 }}>🥮</div>
-            <div style={{ position:"absolute", bottom:-8, left:20, fontSize:28, opacity:0.2 }}>🐇</div>
-            <div style={{ position:"absolute", top:8, right:50, fontSize:22, opacity:0.3 }}>🌕</div>
+            <div style={{ position:"absolute", top:-10, right:10, fontSize:42, opacity:0.25 }}>🎃</div>
+            <div style={{ position:"absolute", bottom:-8, left:20, fontSize:28, opacity:0.2 }}>👻</div>
+            <div style={{ position:"absolute", top:8, right:50, fontSize:22, opacity:0.3 }}>🦇</div>
             <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:17, fontWeight:800, color:"#fff", position:"relative" }}>
               🎃 十月萬聖節課程
             </div>
@@ -1032,7 +1057,7 @@ export default function App() {
       {/* BOTTOM NAV */}
       <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:430, background:"rgba(240,250,242,0.97)", backdropFilter:"blur(16px)", borderTop:"2px solid #C8EDD8", padding:"10px 32px 22px", display:"flex", justifyContent:"space-around" }}>
         {[{key:"browse",icon:"🌿",label:"課程"},{key:"bookings",icon:"⭐",label:"預約"}].map(t => (
-          <button key={t.key} onClick={() => { setActiveTab(t.key); if(t.key==="browse") setSelectedClass(null); }} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3, border:"none", background:"none", cursor:"pointer", fontFamily:"inherit" }}>
+          <button key={t.key} onClick={() => { setActiveTab(t.key); if(t.key==="browse") { setSelectedClass(null); setLangChoice(null); } }} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3, border:"none", background:"none", cursor:"pointer", fontFamily:"inherit" }}>
             <div style={{ width:48, height:48, borderRadius:16, background:activeTab===t.key?"linear-gradient(135deg,#52B788,#2D8A5E)":"#E8F5EE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, transition:"all 0.2s", boxShadow:activeTab===t.key?"0 4px 16px rgba(45,138,94,0.42)":"none", transform:activeTab===t.key?"scale(1.1)":"scale(1)" }}>{t.icon}</div>
             <span style={{ fontSize:11, fontWeight:900, color:activeTab===t.key?"#2D8A5E":"#B0CFC0" }}>{t.label}</span>
           </button>
