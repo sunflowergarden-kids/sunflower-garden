@@ -91,15 +91,34 @@ export default function App() {
           if (q.get("paid") === "1") {
             (async () => {
               try {
-                const docRef = await addDoc(collection(db, "bookings"), {...parsed, confirmedAt: new Date().toISOString()});
-                await fetch(SHEETS_URL, { method:"POST", body: JSON.stringify({action:"addBooking", ...parsed}) }).catch(()=>{});
+                const intentId = parsed.intentId;
+                if (!intentId) throw new Error("no intent");
+                const verify = await new Promise((resolve, reject) => {
+                  const cb = "sgverify_" + Date.now();
+                  const script = document.createElement("script");
+                  let done = false;
+                  const finish = (fn, val) => { if(done)return; done=true; try{ delete window[cb]; }catch(e){} try{ script.remove(); }catch(e){} fn(val); };
+                  window[cb] = (data) => finish(resolve, data);
+                  script.onerror = () => finish(reject, new Error("verify error"));
+                  script.src = SHEETS_URL + "?action=verifyPay&intentId=" + encodeURIComponent(intentId) + "&callback=" + cb + "&t=" + Date.now();
+                  setTimeout(() => finish(reject, new Error("timeout")), 20000);
+                  document.head.appendChild(script);
+                });
+                if (!verify || !verify.ok) {
+                  alert("未收到付款（狀態：" + ((verify && verify.status) || "未知") + "）。預約未確認，請完成付款後再試。");
+                  return;
+                }
+                const docRef = await addDoc(collection(db, "bookings"), {...parsed, confirmedAt: new Date().toISOString(), payStatus: verify.status});
+                await fetch(SHEETS_URL, { method:"POST", body: JSON.stringify({action:"addBooking", ...parsed, payStatus: verify.status}) }).catch(()=>{});
                 setBookings(p => [...p, {...parsed, docId:docRef.id}]);
                 setToast({ name:parsed.className, date:parsed.date, price:parsed.price });
                 setTimeout(() => setToast(null), 3500);
-              } catch(e) {}
-              setPaymentPending(null);
+                setPaymentPending(null);
+                try { sessionStorage.removeItem("sg_pending"); } catch(e) {}
+              } catch(e) {
+                alert("未能核實付款，預約未確認。請稍後再試或聯絡我們。");
+              }
               setShowPaySheet(false);
-              try { sessionStorage.removeItem("sg_pending"); } catch(e) {}
               const url = new URL(window.location.href);
               url.searchParams.delete("paid");
               window.history.replaceState({}, "", url.pathname + url.search);
@@ -804,12 +823,9 @@ export default function App() {
               <div style={{ fontSize:12, fontWeight:700, color:"#AA7700" }}>{paymentPending.className} · {paymentPending.date} · HK${paymentPending.price}</div>
             </div>
           </div>
-          <div style={{ fontSize:12, fontWeight:700, color:"#AA7700", marginBottom:12 }}>預約已登記。如未完成付款，可再打開付款頁。</div>
+          <div style={{ fontSize:12, fontWeight:700, color:"#AA7700", marginBottom:12 }}>未核實到付款，預約未確認。請完成付款。</div>
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={() => { setPayFrameFailed(false); setShowPaySheet(true); }} style={{ flex:1, padding:"11px", borderRadius:14, border:"2px solid #FFD066", background:"#fff", color:"#CC8800", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>重新付款 💳</button>
-            <button onClick={confirmPayment} disabled={confirmingPayment} style={{ flex:2, padding:"11px", borderRadius:14, border:"none", background: confirmingPayment ? "#ccc" : "linear-gradient(135deg,#FFD166,#FF9500)", color:"#fff", fontWeight:900, fontSize:13, cursor: confirmingPayment ? "not-allowed" : "pointer", fontFamily:"'Baloo 2',cursive", opacity: confirmingPayment ? 0.7 : 1 }}>
-              完成
-            </button>
+            <button onClick={() => { setPayFrameFailed(false); setShowPaySheet(true); startAirwallexCheckout(paymentPending); }} style={{ flex:1, padding:"11px", borderRadius:14, border:"none", background:"linear-gradient(135deg,#52B788,#2D8A5E)", color:"#fff", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>繼續付款 💳</button>
           </div>
           <button onClick={() => setPaymentPending(null)} style={{ width:"100%", marginTop:8, padding:"8px", borderRadius:12, border:"none", background:"none", color:"#ccc", fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>取消此預約</button>
         </div>
