@@ -278,11 +278,13 @@ export default function App() {
 
   const getDatesForClass = (id) => allDates.filter(d => String(d.courseId) === String(id));
   const isEnglishClass = (c) => c.category === "英文班" || String(c.name || "").includes("英文");
+  const isPartyClass = (c) => c.category === "聖誕自組派對" || String(c.category || "").includes("自組派對");
   const filtered = classes.filter(c => {
     const catOk = selectedCat === "全部" || c.category === selectedCat;
     if (!catOk) return false;
-    if (langChoice === "en") return isEnglishClass(c);
-    if (langChoice === "zh") return !isEnglishClass(c);
+    if (langChoice === "party") return isPartyClass(c);
+    if (langChoice === "en") return isEnglishClass(c) && !isPartyClass(c);
+    if (langChoice === "zh") return !isEnglishClass(c) && !isPartyClass(c);
     return true;
   });
   // Group by activity name — one card per activity
@@ -353,6 +355,7 @@ export default function App() {
     return { one, two };
   };
   const priceForParty = (cls, partySize) => {
+    if (isPartyClass(cls)) return Number(cls.price) || 4450;
     const { one, two } = getPartyPrices(cls);
     return partySize === "兩大一小" ? two : one;
   };
@@ -362,7 +365,8 @@ export default function App() {
   const openBooking = (d) => { setSelectedDate(d); setForm({ partySize:"", parent:"", child:"", phone2:"", age:"", notes:"" }); setShowModal(true); };
 
   const confirm = async () => {
-    if (!form.partySize || !form.child || !form.phone2) return;
+    if (!isPartyClass(selectedClass) && !form.partySize) return;
+    if (!form.child || !form.phone2) return;
     setSubmitting(true);
     const finalPrice = priceForParty(selectedDate || selectedClass, form.partySize);
     const newBooking = {
@@ -851,7 +855,7 @@ export default function App() {
       {/* BROWSE - Class List */}
       {!loading && !error && (activeTab === "browse") && !selectedClass && !langChoice && (
         <div style={{ padding:"12px 14px 110px" }}>
-          <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:18, fontWeight:800, color:"#1B4332", margin:"6px 4px 14px" }}>先揀班別語言</div>
+          <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:18, fontWeight:800, color:"#1B4332", margin:"6px 4px 14px" }}>先揀班別</div>
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             <div onClick={() => setLangChoice("zh")} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", background:"#fff", cursor:"pointer" }}>
               <div style={{ background:"linear-gradient(135deg,#52B788,#2D8A5E)", padding:"22px 18px", position:"relative", overflow:"hidden" }}>
@@ -859,6 +863,14 @@ export default function App() {
                 <div style={{ width:56, height:56, borderRadius:18, background:"rgba(255,255,255,0.28)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:30 }}>🐼</div>
                 <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:22, fontWeight:800, color:"#fff", marginTop:8 }}>中文班</div>
                 <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.92)", marginTop:4 }}>感官 · 繪本 · 烘焙</div>
+              </div>
+            </div>
+            <div onClick={() => setLangChoice("party")} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", background:"#fff", cursor:"pointer" }}>
+              <div style={{ background:"linear-gradient(135deg,#C1121F,#E5383B)", padding:"22px 18px", position:"relative", overflow:"hidden" }}>
+                <div style={{ position:"absolute", top:-8, right:16, fontSize:56, opacity:0.28 }}>🎄</div>
+                <div style={{ width:56, height:56, borderRadius:18, background:"rgba(255,255,255,0.28)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:30 }}>🎅</div>
+                <div style={{ fontFamily:"'Baloo 2',cursive", fontSize:22, fontWeight:800, color:"#fff", marginTop:8 }}>聖誕自組派對</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.92)", marginTop:4 }}>包場 · 自組活動</div>
               </div>
             </div>
             <div onClick={() => setLangChoice("en")} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", background:"#fff", cursor:"pointer" }}>
@@ -875,7 +887,7 @@ export default function App() {
 
       {!loading && !error && (activeTab === "browse") && !selectedClass && langChoice && (
         <div style={{ padding:"12px 14px 110px" }}>
-          <button onClick={() => setLangChoice(null)} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"#2D8A5E", fontWeight:900, fontSize:13, cursor:"pointer", padding:"4px 0 12px", fontFamily:"inherit" }}>← 返回選擇語言</button>
+          <button onClick={() => setLangChoice(null)} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"#2D8A5E", fontWeight:900, fontSize:13, cursor:"pointer", padding:"4px 0 12px", fontFamily:"inherit" }}>← 返回選擇</button>
           {/* October Halloween banner */}
           <div style={{
             background: "linear-gradient(135deg,#E85D04,#F4A261,#7B2CBF)",
@@ -1109,7 +1121,14 @@ export default function App() {
               </div>
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              {/* 參加人數 dropdown */}
+              {/* 參加人數 dropdown — 自組派對用固定價錢 */}
+              {isPartyClass(selectedClass) ? (
+                <div style={{ background:"#fff", borderRadius:14, padding:"12px 14px", border:"2.5px solid #C8EDD8" }}>
+                  <div style={{ fontSize:11, fontWeight:900, color:"#2D8A5E", marginBottom:4 }}>💰 包場收費</div>
+                  <div style={{ fontSize:20, fontWeight:900, color:"#1B4332" }}>HK${Number(selectedClass.price) || 4450}</div>
+                  <div style={{ fontSize:12, fontWeight:700, color:"#7ABF9A", marginTop:2 }}>聖誕自組派對 · 固定價錢</div>
+                </div>
+              ) : (
               <div>
                 <label style={{ fontSize:11, fontWeight:900, color:"#2D8A5E", display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:0.8 }}>👥 參加人數 *</label>
                 <select
@@ -1128,6 +1147,7 @@ export default function App() {
                   </div>
                 )}
               </div>
+              )}
               {[{label:"🧒 小朋友姓名",key:"child",ph:"例如：陳小明",req:true},{label:"🎂 小朋友年齡",key:"age",ph:"例如：4歲",req:false},{label:"📱 聯絡電話",key:"phone2",ph:"例如：9123 4567",req:true},{label:"👩 家長／監護人姓名",key:"parent",ph:"例如：陳美玲",req:false}].map(f => (
                 <div key={f.key}>
                   <label style={{ fontSize:11, fontWeight:900, color:"#2D8A5E", display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:0.8 }}>{f.label}{f.req?" *":""}</label>
@@ -1148,8 +1168,8 @@ export default function App() {
             </div>
             <div style={{ display:"flex", gap:10, marginTop:12 }}>
               <button onClick={() => setShowModal(false)} style={{ flex:1, padding:"13px", borderRadius:16, border:"2.5px solid #C8EDD8", background:"#fff", color:"#B0C8BC", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>取消</button>
-              <button onClick={confirm} disabled={!form.partySize||!form.child||!form.phone2||submitting} className="bookbtn" style={{ flex:2, padding:"13px", borderRadius:16, border:"none", background:(!form.parent||!form.child||!form.phone2||submitting)?"#C8EDD8":"linear-gradient(135deg,#52B788,#2D8A5E)", color:(!form.parent||!form.child||!form.phone2||submitting)?"#90C0A0":"#fff", fontWeight:900, fontSize:14, cursor:"pointer", fontFamily:"'Baloo 2',cursive" }}>
-                {submitting?"跳轉付款中...":"下一步：付款 HK$"+selectedClass.price+" 💳"}
+              <button onClick={confirm} disabled={(!isPartyClass(selectedClass) && !form.partySize)||!form.child||!form.phone2||submitting} className="bookbtn" style={{ flex:2, padding:"13px", borderRadius:16, border:"none", background:(!form.child||!form.phone2||submitting)?"#C8EDD8":"linear-gradient(135deg,#52B788,#2D8A5E)", color:(!form.child||!form.phone2||submitting)?"#90C0A0":"#fff", fontWeight:900, fontSize:14, cursor:"pointer", fontFamily:"'Baloo 2',cursive" }}>
+                {submitting?"跳轉付款中...":"下一步：付款 HK$"+priceForParty(selectedDate || selectedClass, form.partySize)+" 💳"}
               </button>
             </div>
           </div>
