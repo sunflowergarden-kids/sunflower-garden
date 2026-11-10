@@ -889,7 +889,7 @@ export default function App() {
       {!loading && !error && (activeTab === "browse") && !selectedClass && langChoice && (
         <div style={{ padding:"12px 14px 110px" }}>
           <button onClick={() => setLangChoice(null)} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"#2D8A5E", fontWeight:900, fontSize:13, cursor:"pointer", padding:"4px 0 12px", fontFamily:"inherit" }}>← 返回選擇</button>
-          {/* October Halloween banner */}
+          {langChoice !== "party" && (
           <div style={{
             background: "linear-gradient(135deg,#E85D04,#F4A261,#7B2CBF)",
             borderRadius: 18,
@@ -909,6 +909,7 @@ export default function App() {
               🍬 10/10 – 1/11 ｜ 繪本 · 感官 · 烘焙 ✨
             </div>
           </div>
+          )}
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             {groupedActivities.map((cls,i) => (
               <div key={cls.name} className="card" onClick={() => openClass(cls)} style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.08)", animationDelay:(i*0.06)+"s", background:"#fff", cursor:"pointer" }}>
